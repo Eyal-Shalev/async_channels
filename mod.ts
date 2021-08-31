@@ -12,24 +12,39 @@ enum Transition {
   ACK = "ACK",
 }
 
+/**
+ * @throws {InvalidTransitionError}
+ */
 type State = (t: Transition) => State;
 
+/**
+ * @throws {InvalidTransitionError}
+ */
 export function Empty(t: Transition): State {
   if (t === Transition.POP) return PopStuck;
   if (t === Transition.PUSH) return PushStuck;
   throw new InvalidTransitionError(Empty, t);
 }
 
+/**
+ * @throws {InvalidTransitionError}
+ */
 export function PopStuck(t: Transition): State {
   if (t === Transition.PUSH) return WaitingForAck;
   throw new InvalidTransitionError(PopStuck, t);
 }
 
+/**
+ * @throws {InvalidTransitionError}
+ */
 export function PushStuck(t: Transition): State {
   if (t === Transition.POP) return PopStuck;
   throw new InvalidTransitionError(PushStuck, t);
 }
 
+/**
+ * @throws {InvalidTransitionError}
+ */
 export function WaitingForAck(t: Transition): State {
   if (t === Transition.ACK) return Empty;
   throw new InvalidTransitionError(WaitingForAck, t);
@@ -37,19 +52,20 @@ export function WaitingForAck(t: Transition): State {
 
 const scheduleTask = setTimeout;
 
-export class StateMachine<T> {
+export class AsyncStack<T> {
   protected current: State = Empty;
   protected transitionEventTarget = new EventTarget();
   protected stateEventTarget = new EventTarget();
 
   constructor(protected readonly options?: { debug?: boolean }) {
     if (options?.debug) {
-      const reporter = (prefix: string) =>
-        (ev: Event) => {
+      const reporter = (prefix: string) => {
+        return (ev: Event) => {
           this.debug(`${prefix}::${ev.type}`, {
             val: (ev as CustomEvent).detail,
           });
         };
+      };
       Object.values(Transition).forEach((t) => {
         this.transitionEventTarget.addEventListener(t, reporter("Transition"));
       });
@@ -61,11 +77,8 @@ export class StateMachine<T> {
   }
 
   async pop(): Promise<T> {
-    this.debug(`pop()`, 0);
-
     if ([PopStuck, WaitingForAck].includes(this.current)) {
-      await this.waitForState(Empty)
-      this.debug(`pop()`, 1);
+      await this.waitForState(Empty);
     }
 
     // Register to the WaitingForAck event before transitioning to guarantee order.
@@ -74,7 +87,6 @@ export class StateMachine<T> {
     this.updateState(Transition.POP);
 
     const val = await valP as T;
-    this.debug(`pop()`, 2, { val });
 
     this.updateState(Transition.ACK);
 
@@ -82,11 +94,8 @@ export class StateMachine<T> {
   }
 
   async push(val: T) {
-    this.debug(`push(${val})`, 0);
-
     if ([PushStuck, WaitingForAck].includes(this.current)) {
-      await this.waitForState(Empty)
-      this.debug(`push(${val})`, 1);
+      await this.waitForState(Empty);
     }
 
     // Register to the PopStuck event before transitioning to guarantee order.
@@ -97,13 +106,10 @@ export class StateMachine<T> {
     this.updateState(Transition.PUSH, val);
 
     await popStuckPromise;
-    this.debug(`push(${val})`, 2);
 
     if (this.current === PopStuck) {
       this.updateState(Transition.PUSH, val);
     }
-
-    this.debug(`push(${val})`, 3);
   }
 
   /**

@@ -1,9 +1,11 @@
+#!/usr/bin/env -S deno test --lock lock.test.json --import-map import_map.json
+
 import { assertEquals } from "deno/testing/asserts.ts";
-import { StateMachine } from "./state-machine.ts";
+import { AsyncStack } from "./mod.ts";
 
 Deno.test("pop -> push", async () => {
   console.log();
-  const stack = new StateMachine<string>();
+  const stack = new AsyncStack<string>();
 
   assertEquals(
     await Promise.all([stack.pop(), stack.push("a")])
@@ -14,7 +16,7 @@ Deno.test("pop -> push", async () => {
 
 Deno.test("push -> pop", async () => {
   console.log();
-  const stack = new StateMachine<string>();
+  const stack = new AsyncStack<string>();
 
   assertEquals(
     await Promise.all([stack.push("a"), stack.pop()])
@@ -25,7 +27,7 @@ Deno.test("push -> pop", async () => {
 
 Deno.test("pop -> pop -> push -> push", async () => {
   console.log();
-  const stack = new StateMachine<string>();
+  const stack = new AsyncStack<string>();
 
   assertEquals(
     await Promise.all([
@@ -40,7 +42,7 @@ Deno.test("pop -> pop -> push -> push", async () => {
 
 Deno.test("push -> push -> pop -> pop", async () => {
   console.log();
-  const stack = new StateMachine<string>();
+  const stack = new AsyncStack<string>();
 
   assertEquals(
     await Promise.all([
@@ -55,7 +57,7 @@ Deno.test("push -> push -> pop -> pop", async () => {
 
 Deno.test("push -> pop; pop -> push", async () => {
   console.log();
-  const stack = new StateMachine<string>();
+  const stack = new AsyncStack<string>();
 
   assertEquals(
     await Promise.all([stack.push("a"), stack.pop()]),
