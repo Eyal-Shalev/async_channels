@@ -96,7 +96,6 @@ export class StateMachine<T> {
   }
 
   async push(val: T) {
-    await "TODO: Remove me";
     this.debug(`push(${val})`, 0);
 
     if ([PushStuck, WaitingForAck].includes(this.current)) {
