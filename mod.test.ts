@@ -4,29 +4,24 @@ import { assertEquals } from "deno/testing/asserts.ts";
 import { AsyncStack } from "./mod.ts";
 
 Deno.test("pop -> push", async () => {
-  console.log();
   const stack = new AsyncStack<string>();
 
   assertEquals(
-    await Promise.all([stack.pop(), stack.push("a")])
-      .then((x) => x[0]),
-    "a",
+    await Promise.all([stack.pop(), stack.push("a")]),
+    ["a", undefined],
   );
 });
 
 Deno.test("push -> pop", async () => {
-  console.log();
   const stack = new AsyncStack<string>();
 
   assertEquals(
-    await Promise.all([stack.push("a"), stack.pop()])
-      .then((x) => x[1]),
-    "a",
+    await Promise.all([stack.push("a"), stack.pop()]),
+    [undefined, "a"],
   );
 });
 
 Deno.test("pop -> pop -> push -> push", async () => {
-  console.log();
   const stack = new AsyncStack<string>();
 
   assertEquals(
@@ -41,7 +36,6 @@ Deno.test("pop -> pop -> push -> push", async () => {
 });
 
 Deno.test("push -> push -> pop -> pop", async () => {
-  console.log();
   const stack = new AsyncStack<string>();
 
   assertEquals(
@@ -56,7 +50,6 @@ Deno.test("push -> push -> pop -> pop", async () => {
 });
 
 Deno.test("push -> pop; pop -> push", async () => {
-  console.log();
   const stack = new AsyncStack<string>();
 
   assertEquals(
