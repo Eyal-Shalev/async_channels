@@ -22,20 +22,16 @@ export function Empty(t: Transition): State {
 
 export function PopStuck(t: Transition): State {
   if (t === Transition.PUSH) return WaitingForAck;
-  // if (t === Transition.POP) return { type: "state", target: Empty };
   throw new InvalidTransitionError(PopStuck, t);
 }
 
 export function PushStuck(t: Transition): State {
   if (t === Transition.POP) return PopStuck;
-  // if (t === Transition.PUSH) return { type: "state", target: Empty };
   throw new InvalidTransitionError(PushStuck, t);
 }
 
 export function WaitingForAck(t: Transition): State {
   if (t === Transition.ACK) return Empty;
-  // if (t === Transition.POP) return { type: "state", target: Empty };
-  // if (t === Transition.PUSH) return { type: "state", target: Empty };
   throw new InvalidTransitionError(WaitingForAck, t);
 }
 
