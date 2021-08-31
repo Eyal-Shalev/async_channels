@@ -1,15 +1,68 @@
-import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
-import {StateMachine} from "./state-machine.ts";
+import { assertEquals } from "deno/testing/asserts.ts";
+import { StateMachine } from "./state-machine.ts";
 
-Deno.test(new URL("", import.meta.url).pathname, async () => {
-  const stack = new StateMachine<any>();
+Deno.test("pop -> push", async () => {
+  console.log();
+  const stack = new StateMachine<string>();
+
   assertEquals(
-    1,2
+    await Promise.all([stack.pop(), stack.push("a")])
+      .then((x) => x[0]),
+    "a",
+  );
+});
+
+Deno.test("push -> pop", async () => {
+  console.log();
+  const stack = new StateMachine<string>();
+
+  assertEquals(
+    await Promise.all([stack.push("a"), stack.pop()])
+      .then((x) => x[1]),
+    "a",
+  );
+});
+
+Deno.test("pop -> pop -> push -> push", async () => {
+  console.log();
+  const stack = new StateMachine<string>();
+
+  assertEquals(
+    await Promise.all([
+      stack.pop(),
+      stack.pop(),
+      stack.push("a"),
+      stack.push("b"),
+    ]),
+    ["a","b", undefined, undefined],
+  );
+});
+
+Deno.test("push -> push -> pop -> pop", async () => {
+  console.log();
+  const stack = new StateMachine<string>();
+
+  assertEquals(
+    await Promise.all([
+      stack.push("a"),
+      stack.push("b"),
+      stack.pop(),
+      stack.pop(),
+    ]),
+    [undefined, undefined, "a","b"],
+  );
+});
+
+Deno.test("push -> pop; pop -> push", async () => {
+  console.log();
+  const stack = new StateMachine<string>();
+
+  assertEquals(
+    await Promise.all([stack.push("a"), stack.pop()]),
+    [undefined, "a"]
   )
-  // console.log(await Promise.allSettled([
-  //   stack.pop().then(val => ({pop: val})),
-  //   stack.push("a").then(() => ({push: true})),
-  //   stack.push("b").then(() => ({push: true})),
-  //   stack.pop().then(val => ({pop: val})),
-  // ]));
+  assertEquals(
+    await Promise.all([stack.pop(), stack.push("b")]),
+    ["b", undefined]
+  )
 });
