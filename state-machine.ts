@@ -12,17 +12,7 @@ enum Transition {
   ACK = "ACK",
 }
 
-type RetryState = { type: "state"; target: State };
-type RetryTransition = { type: "transition"; target: Transition };
-type Retry = RetryState | RetryTransition;
-
 type State = (t: Transition) => State;
-
-const isState = (x: State | Retry): x is State => typeof x === "function";
-const isRetry = (x: State | Retry): x is Retry => !isState(x);
-const isRetryState = (x: Retry): x is RetryState => x.type === "state";
-const isRetryTransition = (x: Retry): x is RetryTransition =>
-  x.type === "transition";
 
 export function Empty(t: Transition): State {
   if (t === Transition.POP) return PopStuck;
