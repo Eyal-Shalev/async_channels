@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno test --lock lock.test.json --import-map import_map.json
 
 import { assertEquals } from "deno/testing/asserts.ts";
-import { AsyncQueue } from "./mod.ts";
+import { AsyncQueue } from "async-queue/async-queue.ts";
 
 Deno.test("no-buffer remove -> add", async () => {
   const stack = new AsyncQueue<string>(0);
