@@ -3,17 +3,16 @@ Inspired by `Go` & `Clojure` Channels, `async-channels` provides channels as an 
 
 ## Example
 ```typescript
-import { Channel, select } from "https://deno.land/x/async-channels/mod.ts";
+import { Channel } from "https://deno.land/x/async-channels/mod.ts";
 
 const sleep = (duration: number) => new Promise<void>(res => {
   setTimeout(()=>res(), duration);
 });
 
-function producer(stopChan: Channel<void>) {
+function produce(num: number) {
   const ch = new Channel(0);
   (async () => {
-    let i = 0;
-    while (!(await select([stopChan], {default: true}))[1]) {
+    for (let i=0; i<num; i++) {
       await sleep(500); // Do some work...
       await ch.add(i++);
     }
@@ -23,12 +22,9 @@ function producer(stopChan: Channel<void>) {
   return ch;
 }
 
-const stopChan = new Channel(0);
+sleep(200).then(()=>console.log("boo"));
 
-const productsChan = producer(stopChan)
-
-for await (let product of productsChan) {
-  if (product >= 5) stopChan.close()
+for await (let product of produce(5)) {
   console.log({product})
 }
 ```
