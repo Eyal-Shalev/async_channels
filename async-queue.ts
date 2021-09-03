@@ -139,7 +139,7 @@ export class AsyncQueue<T> {
     });
   }
 
-  protected waitForTransition(...transitions: Transition): Promise<T | undefined> {
+  protected waitForTransition(...transitions: Transition[]): Promise<T | undefined> {
     return new Promise<T | undefined>((resolve) => {
       transitions.forEach(t => {
         this.transitionEventTarget.addEventListener(t, (ev) => {
