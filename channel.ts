@@ -20,7 +20,7 @@ export class Channel<T> extends AsyncQueue<T> {
     super(capacity, options);
   }
 
-  async abortableRemove(abortCtrl: AbortController): Promise<T> {
+  async abortableRemove(abortCtrl: AbortController): Promise<T|undefined> {
     const abortPromise = makeAbortPromise(abortCtrl);
 
     if ([RemoveStuck, WaitingForAck].includes(this.current)) {
