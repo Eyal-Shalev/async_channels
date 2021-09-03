@@ -76,7 +76,7 @@ export interface SelectOptions {
 }
 export async function select<T>(
   items: (Channel<T> | [Channel<T>, T])[],
-  options?: SelectOptions,
+  /*options?: SelectOptions,*/
 ): Promise<[T, Channel<T>] | [true, Channel<T>] | [unknown, undefined]> {
   const ctrl = new AbortController();
 
