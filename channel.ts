@@ -4,6 +4,7 @@ import {
   Idle,
   RemoveStuck,
   WaitingForAck,
+  Closed,
 } from "async-queue/state-machine.ts";
 
 export class SelectAbortedError extends Error {
@@ -23,10 +24,12 @@ export class Channel<T> extends AsyncQueue<T> {
     const abortPromise = makeAbortPromise(abortCtrl);
 
     if ([RemoveStuck, WaitingForAck].includes(this.current)) {
-      await Promise.race([this.waitForState(Idle), abortPromise]);
+      await Promise.race([this.waitForState(Idle, Closed), abortPromise]);
     }
 
     if (abortCtrl.signal.aborted) throw new SelectAbortedError();
+
+    if (this.current === Closed) return undefined;
 
     if (this.current === Idle && !this.queue.isEmpty) {
       abortCtrl.abort();
@@ -95,6 +98,5 @@ export async function select<T>(
 
     return [true, item[0]];
   }
-
-  return [options?.default, undefined];
+  throw new Error("something went wrong")
 }
