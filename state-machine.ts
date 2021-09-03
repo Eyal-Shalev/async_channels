@@ -58,7 +58,7 @@ export function WaitingForAck(t: Transition): State {
   throw new InvalidTransitionError(WaitingForAck, t);
 }
 
-escort function Closed(t: Transition): State {
+export function Closed(t: Transition): State {
   if (t === Transition.CLOSE) return Closed;
   throw new InvalidTransitionError(Closed, t);
 }
