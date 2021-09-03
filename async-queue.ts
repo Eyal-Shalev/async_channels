@@ -6,6 +6,7 @@ import {
   State,
   Transition,
   WaitingForAck,
+  Closed,
 } from "async-queue/state-machine.ts";
 
 export interface AsyncQueueOptions {
@@ -42,20 +43,27 @@ export class AsyncQueue<T> {
     }
   }
 
+  public close(): void {
+    this.updateState(Transition.CLOSE);
+  }
+
   public async remove(): Promise<T> {
     if ([RemoveStuck, WaitingForAck].includes(this.current)) {
-      await this.waitForState(Idle);
+      await this.waitForState(Idle, Closed);
     }
+
+    if (this.current === Closed) return undefined;
 
     if (this.current === Idle && !this.queue.isEmpty) {
       return this.queue.remove();
     }
 
     // Register to the WaitingForAck event before transitioning to guarantee order.
-    const waitForAckPromise = this.waitForState(WaitingForAck);
+    const waitForAckPromise = this.waitForState(WaitingForAck, Closed);
 
     this.updateState(Transition.REMOVE);
     const val = await waitForAckPromise as T;
+    if (this.current === Closed) return undefined;
     this.updateState(Transition.ACK);
 
     if (this.queue.isEmpty) return val;
@@ -116,24 +124,28 @@ export class AsyncQueue<T> {
     );
   }
 
-  protected waitForState(state: State): Promise<T | undefined> {
-    if (this.current === state) {
+  protected waitForState(...states: State[]): Promise<T | undefined> {
+    if (states.include(this.current)) {
       return Promise.resolve<T | undefined>(this.currentVal);
     }
     return new Promise<T | undefined>((resolve) => {
-      this.stateEventTarget.addEventListener(state.name, (ev) => {
-        scheduleTask(() => {
-          resolve((ev as CustomEvent).detail as T);
-        });
-      }, { once: true });
+      states.forEach(state => {
+        this.stateEventTarget.addEventListener(state.name, (ev) => {
+          scheduleTask(() => {
+            resolve((ev as CustomEvent).detail as T);
+          });
+        }, { once: true });
+      });
     });
   }
 
-  protected waitForTransition(t: Transition): Promise<T | undefined> {
+  protected waitForTransition(...transitions: Transition): Promise<T | undefined> {
     return new Promise<T | undefined>((resolve) => {
-      this.transitionEventTarget.addEventListener(t, (ev) => {
-        scheduleTask(() => resolve((ev as CustomEvent).detail as T));
-      }, { once: true });
+      transitions.forEach(t => {
+        this.transitionEventTarget.addEventListener(t, (ev) => {
+          scheduleTask(() => resolve((ev as CustomEvent).detail as T));
+        }, { once: true });
+      });
     });
   }
 
