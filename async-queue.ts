@@ -125,7 +125,7 @@ export class AsyncQueue<T> {
   }
 
   protected waitForState(...states: State[]): Promise<T | undefined> {
-    if (states.include(this.current)) {
+    if (states.includes(this.current)) {
       return Promise.resolve<T | undefined>(this.currentVal);
     }
     return new Promise<T | undefined>((resolve) => {
