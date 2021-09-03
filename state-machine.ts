@@ -13,6 +13,7 @@ export enum Transition {
   REMOVE = "REMOVE",
   ADD = "ADD",
   ACK = "ACK",
+  CLOSE = "CLOSE",
 }
 
 /**
@@ -26,6 +27,7 @@ export type State = (t: Transition) => State;
 export function Idle(t: Transition): State {
   if (t === Transition.REMOVE) return RemoveStuck;
   if (t === Transition.ADD) return AddStuck;
+  if (t === Transition.CLOSE) return Closed;
   throw new InvalidTransitionError(Idle, t);
 }
 
@@ -34,6 +36,7 @@ export function Idle(t: Transition): State {
  */
 export function RemoveStuck(t: Transition): State {
   if (t === Transition.ADD) return WaitingForAck;
+  if (t === Transition.CLOSE) return Closed;
   throw new InvalidTransitionError(RemoveStuck, t);
 }
 
@@ -42,6 +45,7 @@ export function RemoveStuck(t: Transition): State {
  */
 export function AddStuck(t: Transition): State {
   if (t === Transition.REMOVE) return RemoveStuck;
+  if (t === Transition.CLOSE) return Closed;
   throw new InvalidTransitionError(AddStuck, t);
 }
 
@@ -50,5 +54,11 @@ export function AddStuck(t: Transition): State {
  */
 export function WaitingForAck(t: Transition): State {
   if (t === Transition.ACK) return Idle;
+  if (t === Transition.CLOSE) return Closed;
   throw new InvalidTransitionError(WaitingForAck, t);
+}
+
+escort function Closed(t: Transition): State {
+  if (t === Transition.CLOSE) return Closed;
+  throw new InvalidTransitionError(Closed, t);
 }
