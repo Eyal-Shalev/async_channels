@@ -47,7 +47,7 @@ export class AsyncQueue<T> {
     this.updateState(Transition.CLOSE);
   }
 
-  public async remove(): Promise<T> {
+  public async remove(): Promise<T|undefined> {
     if ([RemoveStuck, WaitingForAck].includes(this.current)) {
       await this.waitForState(Idle, Closed);
     }
