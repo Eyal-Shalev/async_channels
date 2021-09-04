@@ -1,4 +1,4 @@
-import { AsyncQueue, AsyncQueueOptions } from "./async-queue.ts";
+import { AsyncQueue, AsyncQueueOptions } from "./internal/async-queue.ts";
 
 export type ChannelOptions = AsyncQueueOptions;
 
