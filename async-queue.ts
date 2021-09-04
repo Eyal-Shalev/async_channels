@@ -1,4 +1,4 @@
-import { Queue } from "async-queue/queue.ts";
+import { Queue } from "./queue.ts";
 import {
   AddStuck,
   Idle,
@@ -6,10 +6,11 @@ import {
   State,
   Transition,
   WaitingForAck,
-} from "async-queue/state-machine.ts";
+} from "./state-machine.ts";
 
 export interface AsyncQueueOptions {
   debug?: boolean;
+  debugExtra?: Record<string, unknown>;
 }
 
 export class AsyncQueue<T> {
@@ -25,6 +26,7 @@ export class AsyncQueue<T> {
   ) {
     this.queue = new Queue<T>(capacity);
     if (options?.debug) {
+      console.log(); // Don't ask...
       const reporter = (prefix: string) => {
         return (ev: Event) => {
           this.debug(`${prefix}::${ev.type}`, {
@@ -42,12 +44,23 @@ export class AsyncQueue<T> {
     }
   }
 
-  public async remove(): Promise<T> {
+  public async remove(abortCtrl?: AbortController): Promise<T> {
+    this.debug("remove()");
+    const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
+
     if ([RemoveStuck, WaitingForAck].includes(this.current)) {
-      await this.waitForState(Idle);
+      await (abortPromise
+        ? Promise.race([
+          this.waitForState(Idle),
+          abortPromise,
+        ])
+        : this.waitForState(Idle));
     }
 
+    if (abortCtrl?.signal.aborted) throw new AbortedError("remove");
+
     if (this.current === Idle && !this.queue.isEmpty) {
+      abortCtrl?.abort();
       return this.queue.remove();
     }
 
@@ -55,35 +68,58 @@ export class AsyncQueue<T> {
     const waitForAckPromise = this.waitForState(WaitingForAck);
 
     this.updateState(Transition.REMOVE);
-    const val = await waitForAckPromise as T;
+    const val =
+      await (abortPromise
+        ? Promise.race([waitForAckPromise, abortPromise])
+        : waitForAckPromise);
+
+    if (abortCtrl?.signal.aborted) throw new AbortedError("remove");
+
+    abortCtrl?.abort();
     this.updateState(Transition.ACK);
 
-    if (this.queue.isEmpty) return val;
+    if (this.queue.isEmpty) return val as T;
 
     const valToReturn = this.queue.remove();
-    this.queue.add(val);
+    this.queue.add(val as T);
     return valToReturn;
   }
 
-  public async add(val: T): Promise<void> {
+  public async add(val: T, abortCtrl?: AbortController): Promise<void> {
+    this.debug(`add(${val})`);
+    const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
+
     if ([AddStuck, WaitingForAck].includes(this.current)) {
-      await this.waitForState(Idle);
+      await (abortPromise
+        ? Promise.race([this.waitForState(Idle)])
+        : this.waitForState(Idle));
     }
 
+    if (abortCtrl?.signal.aborted) throw new AbortedError("add");
+
     if (this.current === Idle && !this.queue.isFull) {
+      abortCtrl?.abort();
       this.queue.add(val);
       return;
     }
 
     // Register to the RemoveStuck event before transitioning to guarantee order.
-    const afterAddPromise = this.current === RemoveStuck
+    const removeStuckPromise = this.current === RemoveStuck
       ? Promise.resolve()
       : this.waitForState(RemoveStuck);
 
     this.updateState(Transition.ADD, val);
-    if (this.current === Idle) return;
+    if (this.current === Idle) {
+      abortCtrl?.abort();
+      return;
+    }
 
-    await afterAddPromise;
+    await (abortPromise
+      ? Promise.race([removeStuckPromise, abortPromise])
+      : removeStuckPromise);
+
+    if (abortCtrl?.signal.aborted) throw new AbortedError("add");
+    abortCtrl?.abort();
 
     if (this.current === RemoveStuck) {
       return this.updateState(Transition.ADD, val);
@@ -106,6 +142,7 @@ export class AsyncQueue<T> {
    * @throws {InvalidTransitionError}
    */
   protected updateState(t: Transition, val?: T): void {
+    this.debug(`updateState(${t}, ${val})`);
     this.currentVal = val;
     this.current = this.current(t);
     this.transitionEventTarget.dispatchEvent(
@@ -116,20 +153,24 @@ export class AsyncQueue<T> {
     );
   }
 
-  protected waitForState(state: State): Promise<T | undefined> {
-    if (this.current === state) {
+  protected waitForState(...states: State[]): Promise<T | undefined> {
+    this.debug(`waitForState(${states.map((s) => s.name).join(", ")})`);
+    if (states.includes(this.current)) {
       return Promise.resolve<T | undefined>(this.currentVal);
     }
     return new Promise<T | undefined>((resolve) => {
-      this.stateEventTarget.addEventListener(state.name, (ev) => {
-        scheduleTask(() => {
-          resolve((ev as CustomEvent).detail as T);
-        });
-      }, { once: true });
+      states.forEach((state) => {
+        this.stateEventTarget.addEventListener(state.name, (ev) => {
+          scheduleTask(() => {
+            resolve((ev as CustomEvent).detail as T);
+          });
+        }, { once: true });
+      });
     });
   }
 
   protected waitForTransition(t: Transition): Promise<T | undefined> {
+    this.debug("waitForTransition", t);
     return new Promise<T | undefined>((resolve) => {
       this.transitionEventTarget.addEventListener(t, (ev) => {
         scheduleTask(() => resolve((ev as CustomEvent).detail as T));
@@ -139,9 +180,26 @@ export class AsyncQueue<T> {
 
   protected debug(...args: unknown[]) {
     if (this.options?.debug) {
-      console.debug(...args, { currentState: this.current.name });
+      console.debug(...args, {
+        currentState: this.current.name,
+        currentVal: this.currentVal,
+        ...(this.options?.debugExtra || {}),
+      });
     }
   }
 }
 
 const scheduleTask = setTimeout;
+
+export function makeAbortPromise(abortCtrl: AbortController) {
+  if (abortCtrl.signal.aborted) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    abortCtrl.signal.addEventListener("abort", () => resolve());
+  });
+}
+
+export class AbortedError extends Error {
+  constructor(type: "add" | "remove") {
+    super(`${type} aborted`);
+  }
+}

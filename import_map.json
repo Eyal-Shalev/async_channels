@@ -1,6 +1,5 @@
 {
   "imports": {
-    "async-queue/": "./",
     "deno/": "https://deno.land/std@0.106.0/"
   }
 }

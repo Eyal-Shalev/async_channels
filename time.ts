@@ -82,7 +82,7 @@ export class Timer {
     const wasAborted = this.ctrl?.signal.aborted;
     this.ctrl = new AbortController();
     this.timeoutId = setTimeout(() => {
-      this.c.abortableAdd(new Date(), this.ctrl).catch();
+      this.c.add(new Date(), this.ctrl).catch();
     }, duration);
     return wasAborted;
   }

@@ -1,5 +1,5 @@
 import { assert } from "deno/testing/asserts.ts";
-import { Timer } from "async-queue/time.ts";
+import { Timer } from "./time.ts";
 
 Deno.test("The timer returns results withing resonable margin of error", async () => {
   await Promise.all([50, 100, 200].map(async (duration) => {
