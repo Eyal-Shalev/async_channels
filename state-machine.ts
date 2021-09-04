@@ -1,4 +1,3 @@
-
 export class InvalidTransitionError extends TypeError {
   constructor(state: State, t: Transition) {
     super(
