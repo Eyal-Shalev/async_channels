@@ -27,4 +27,4 @@ jobs:
         run: deno lint
 
       - name: Run tests
-        run: deno test --lock lock.test.json --import-map import_map.json
+        run: ./run-tests.sh
