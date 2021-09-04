@@ -8,7 +8,7 @@ Deno.test("no-buffer remove -> add", async () => {
 
   assertEquals(
     await Promise.all([stack.remove(), stack.add("a")]),
-    ["a", undefined],
+    [["a", true], undefined],
   );
 });
 
@@ -17,7 +17,7 @@ Deno.test("no-buffer add -> remove", async () => {
 
   assertEquals(
     await Promise.all([stack.add("a"), stack.remove()]),
-    [undefined, "a"],
+    [undefined, ["a", true]],
   );
 });
 
@@ -31,7 +31,7 @@ Deno.test("no-buffer remove -> remove -> add -> add", async () => {
       stack.add("a"),
       stack.add("b"),
     ]),
-    ["a", "b", undefined, undefined],
+    [["a", true], ["b", true], undefined, undefined],
   );
 });
 
@@ -45,7 +45,7 @@ Deno.test("no-buffer add -> add -> remove -> remove", async () => {
       stack.remove(),
       stack.remove(),
     ]),
-    [undefined, undefined, "a", "b"],
+    [undefined, undefined, ["a", true], ["b", true]],
   );
 });
 
@@ -54,11 +54,11 @@ Deno.test("no-buffer add -> remove; remove -> add", async () => {
 
   assertEquals(
     await Promise.all([stack.add("a"), stack.remove()]),
-    [undefined, "a"],
+    [undefined, ["a", true]],
   );
   assertEquals(
     await Promise.all([stack.remove(), stack.add("b")]),
-    ["b", undefined],
+    [["b", true], undefined],
   );
 });
 
@@ -66,7 +66,7 @@ Deno.test("buffered add -> remove", async () => {
   const stack = new AsyncQueue<string>(1);
 
   await stack.add("a");
-  assertEquals(await stack.remove(), "a");
+  assertEquals(await stack.remove(), ["a", true]);
 });
 
 Deno.test("buffered add -> add -> remove -> remove", async () => {
@@ -76,19 +76,19 @@ Deno.test("buffered add -> add -> remove -> remove", async () => {
 
   assertEquals(
     await Promise.all([stack.add("b"), stack.remove()]),
-    [undefined, "a"],
+    [undefined, ["a", true]],
   );
 
-  assertEquals(await stack.remove(), "b");
+  assertEquals(await stack.remove(), ["b", true]);
 });
 
 Deno.test("buffered add -> remove; remove -> add", async () => {
   const stack = new AsyncQueue<string>(1);
 
   await stack.add("a");
-  assertEquals(await stack.remove(), "a");
+  assertEquals(await stack.remove(), ["a", true]);
   await stack.add("a");
-  assertEquals(await stack.remove(), "a");
+  assertEquals(await stack.remove(), ["a", true]);
 });
 
 Deno.test("buffered add -> add -> add -> remove -> remove -> remove", async () => {
@@ -99,9 +99,9 @@ Deno.test("buffered add -> add -> add -> remove -> remove -> remove", async () =
 
   assertEquals(
     await Promise.all([stack.add("c"), stack.remove()]),
-    [undefined, "a"],
+    [undefined, ["a", true]],
   );
 
-  assertEquals(await stack.remove(), "b");
-  assertEquals(await stack.remove(), "c");
+  assertEquals(await stack.remove(), ["b", true]);
+  assertEquals(await stack.remove(), ["c", true]);
 });

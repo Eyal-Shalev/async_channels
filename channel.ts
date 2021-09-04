@@ -17,8 +17,10 @@ export async function select<T>(
   options?: SelectOptions<T> | Exclude<SelectOptions<T>, "default">,
 ): Promise<[T, Channel<T>] | [true, Channel<T>] | [unknown, undefined]> {
   const abortCtrl = new AbortController();
-  const selectPromises: Promise<void | T>[] = items.map((item) => {
-    if (item instanceof Channel) return item.remove(abortCtrl);
+  const selectPromises: Promise<void | T | undefined>[] = items.map((item) => {
+    if (item instanceof Channel) {
+      return item.remove(abortCtrl).then(([val]) => val);
+    }
     return item[0].add(item[1], abortCtrl);
   });
 

@@ -1,6 +1,7 @@
 import { Queue } from "./queue.ts";
 import {
   AddStuck,
+  Closed,
   Idle,
   RemoveStuck,
   State,
@@ -21,10 +22,10 @@ export class AsyncQueue<T> {
   protected readonly queue: Queue<T>;
 
   constructor(
-    capacity: number,
+    bufferSize: number,
     protected readonly options?: AsyncQueueOptions,
   ) {
-    this.queue = new Queue<T>(capacity);
+    this.queue = new Queue<T>(bufferSize);
     if (options?.debug) {
       console.log(); // Don't ask...
       const reporter = (prefix: string) => {
@@ -44,24 +45,35 @@ export class AsyncQueue<T> {
     }
   }
 
-  public async remove(abortCtrl?: AbortController): Promise<T> {
+  public close() {
+    this.updateState(Transition.CLOSE);
+  }
+
+  public async remove(
+    abortCtrl?: AbortController,
+  ): Promise<[T, true] | [undefined, false]> {
     this.debug("remove()");
     const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
 
     if ([RemoveStuck, WaitingForAck].includes(this.current)) {
       await (abortPromise
         ? Promise.race([
-          this.waitForState(Idle),
+          this.waitForState(Idle, Closed),
           abortPromise,
         ])
-        : this.waitForState(Idle));
+        : this.waitForState(Idle, Closed));
     }
 
     if (abortCtrl?.signal.aborted) throw new AbortedError("remove");
 
+    if (this.current === Closed) {
+      abortCtrl?.abort();
+      return [undefined, false];
+    }
+
     if (this.current === Idle && !this.queue.isEmpty) {
       abortCtrl?.abort();
-      return this.queue.remove();
+      return [this.queue.remove(), true];
     }
 
     // Register to the WaitingForAck event before transitioning to guarantee order.
@@ -78,11 +90,11 @@ export class AsyncQueue<T> {
     abortCtrl?.abort();
     this.updateState(Transition.ACK);
 
-    if (this.queue.isEmpty) return val as T;
+    if (this.queue.isEmpty) return [val as T, true];
 
     const valToReturn = this.queue.remove();
     this.queue.add(val as T);
-    return valToReturn;
+    return [valToReturn, true];
   }
 
   public async add(val: T, abortCtrl?: AbortController): Promise<void> {
