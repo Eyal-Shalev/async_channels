@@ -1,6 +1,5 @@
 import { assertEquals, assertStrictEquals, fail } from "deno/testing/asserts.ts";
 import { Channel, select } from "./channel.ts";
-import { sleep } from "./utils.ts";
 
 Deno.test("select when 1 channel is buffered", async () => {
   const c1 = new Channel<string>(0);

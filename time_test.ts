@@ -12,7 +12,7 @@ Deno.test("The timer returns results withing resonable margin of error", async (
       JSON.stringify({ current, val }),
     );
     assert(
-      val.getTime() - start.getTime() > duration,
+      val.getTime() - start.getTime() >= duration,
       JSON.stringify({ val, start }),
     );
     assert(
