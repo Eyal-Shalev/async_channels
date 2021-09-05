@@ -42,12 +42,16 @@ const data: [State, Transition, State | false][] = [
 
 data.forEach(([from, t, to]) => {
   if (to) {
-    assertEquals(from(t), to);
+    Deno.test(`${from.name}(${t}) === ${to.name}`, () => {
+      assertEquals(from(t), to);
+    });
   } else {
-    assertThrows(
-      () => from(t),
-      InvalidTransitionError,
-      new InvalidTransitionError(from, t).message,
-    );
+    Deno.test(`${from.name}(${t}) throws new InvalidTransitionError(${from.name}, ${t})`, () => {
+      assertThrows(
+        () => from(t),
+        InvalidTransitionError,
+        new InvalidTransitionError(from, t).message,
+      );
+    });
   }
 });
