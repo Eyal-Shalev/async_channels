@@ -22,7 +22,7 @@ export interface Sender<T> {
   send(val: T, abortCtrl?: AbortController): Promise<void>;
 }
 
-export interface Receiver<T> {
+export interface Receiver<T> extends AsyncIterable<T> {
   receive(abortCtrl?: AbortController): Promise<[T, true] | [undefined, false]>;
 }
 
@@ -93,7 +93,7 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
     }
 
     // Register to the WaitingForAck event before transitioning to guarantee order.
-    const waitForAckPromise = this.waitForState(WaitingForAck);
+    const waitForAckPromise = this.waitForState(WaitingForAck, Closed);
 
     this.updateState(Transition.RECEIVE);
     const val =
@@ -102,6 +102,11 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
         : waitForAckPromise);
 
     if (abortCtrl?.signal.aborted) throw new AbortedError("receive");
+
+    if (this.current === Closed) {
+      abortCtrl?.abort();
+      return [undefined, false];
+    }
 
     abortCtrl?.abort();
     this.updateState(Transition.ACK);
@@ -142,6 +147,7 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
       return;
     }
 
+    const waitForIdlePromise = this.waitForState(Idle);
     await (abortPromise
       ? Promise.race([receiveStuckPromise, abortPromise])
       : receiveStuckPromise);
@@ -150,7 +156,17 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
     abortCtrl?.abort();
 
     if (this.current === ReceiveStuck) {
-      return this.updateState(Transition.SEND, val);
+      this.updateState(Transition.SEND, val);
+    }
+
+    await waitForIdlePromise;
+  }
+
+  public async *[Symbol.asyncIterator](): AsyncGenerator<T, void, void> {
+    while (true) {
+      const res = await this.receive();
+      if (!res[1]) return;
+      yield res[0];
     }
   }
 
