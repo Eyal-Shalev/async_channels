@@ -62,5 +62,6 @@ export function WaitingForAck(t: Transition): State {
  */
 export function Closed(t: Transition): State {
   if (t === Transition.CLOSE) return Closed;
+  // if (t === Transition.ACK) return Closed;
   throw new InvalidTransitionError(Closed, t);
 }
