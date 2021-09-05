@@ -11,142 +11,142 @@ import {
   Transition,
 } from "./internal/state-machine.ts";
 
-Deno.test("no-buffer remove -> add", async () => {
+Deno.test("no-buffer recieve -> send", async () => {
   const stack = new Channel<string>(0);
 
   assertEquals(
-    await Promise.all([stack.remove(), stack.add("a")]),
+    await Promise.all([stack.recieve(), stack.send("a")]),
     [["a", true], undefined],
   );
 });
 
-Deno.test("no-buffer add -> remove", async () => {
+Deno.test("no-buffer send -> recieve", async () => {
   const stack = new Channel<string>(0);
 
   assertEquals(
-    await Promise.all([stack.add("a"), stack.remove()]),
+    await Promise.all([stack.send("a"), stack.recieve()]),
     [undefined, ["a", true]],
   );
 });
 
-Deno.test("no-buffer remove -> remove -> add -> add", async () => {
+Deno.test("no-buffer recieve -> recieve -> send -> send", async () => {
   const stack = new Channel<string>(0);
 
   assertEquals(
     await Promise.all([
-      stack.remove(),
-      stack.remove(),
-      stack.add("a"),
-      stack.add("b"),
+      stack.recieve(),
+      stack.recieve(),
+      stack.send("a"),
+      stack.send("b"),
     ]),
     [["a", true], ["b", true], undefined, undefined],
   );
 });
 
-Deno.test("no-buffer add -> add -> remove -> remove", async () => {
+Deno.test("no-buffer send -> send -> recieve -> recieve", async () => {
   const stack = new Channel<string>(0);
 
   assertEquals(
     await Promise.all([
-      stack.add("a"),
-      stack.add("b"),
-      stack.remove(),
-      stack.remove(),
+      stack.send("a"),
+      stack.send("b"),
+      stack.recieve(),
+      stack.recieve(),
     ]),
     [undefined, undefined, ["a", true], ["b", true]],
   );
 });
 
-Deno.test("no-buffer add -> remove; remove -> add", async () => {
+Deno.test("no-buffer send -> recieve; recieve -> send", async () => {
   const stack = new Channel<string>(0);
 
   assertEquals(
-    await Promise.all([stack.add("a"), stack.remove()]),
+    await Promise.all([stack.send("a"), stack.recieve()]),
     [undefined, ["a", true]],
   );
   assertEquals(
-    await Promise.all([stack.remove(), stack.add("b")]),
+    await Promise.all([stack.recieve(), stack.send("b")]),
     [["b", true], undefined],
   );
 });
 
-Deno.test("buffered add -> remove", async () => {
+Deno.test("buffered send -> recieve", async () => {
   const stack = new Channel<string>(1);
 
-  await stack.add("a");
-  assertEquals(await stack.remove(), ["a", true]);
+  await stack.send("a");
+  assertEquals(await stack.recieve(), ["a", true]);
 });
 
-Deno.test("buffered add -> add -> remove -> remove", async () => {
+Deno.test("buffered send -> send -> recieve -> recieve", async () => {
   const stack = new Channel<string>(1);
 
-  await stack.add("a");
+  await stack.send("a");
 
   assertEquals(
-    await Promise.all([stack.add("b"), stack.remove()]),
+    await Promise.all([stack.send("b"), stack.recieve()]),
     [undefined, ["a", true]],
   );
 
-  assertEquals(await stack.remove(), ["b", true]);
+  assertEquals(await stack.recieve(), ["b", true]);
 });
 
-Deno.test("buffered add -> remove; remove -> add", async () => {
+Deno.test("buffered send -> recieve; recieve -> send", async () => {
   const stack = new Channel<string>(1);
 
-  await stack.add("a");
-  assertEquals(await stack.remove(), ["a", true]);
-  await stack.add("a");
-  assertEquals(await stack.remove(), ["a", true]);
+  await stack.send("a");
+  assertEquals(await stack.recieve(), ["a", true]);
+  await stack.send("a");
+  assertEquals(await stack.recieve(), ["a", true]);
 });
 
-Deno.test("buffered add -> add -> add -> remove -> remove -> remove", async () => {
+Deno.test("buffered send -> send -> send -> recieve -> recieve -> recieve", async () => {
   const stack = new Channel<string>(2);
 
-  await stack.add("a");
-  await stack.add("b");
+  await stack.send("a");
+  await stack.send("b");
 
   assertEquals(
-    await Promise.all([stack.add("c"), stack.remove()]),
+    await Promise.all([stack.send("c"), stack.recieve()]),
     [undefined, ["a", true]],
   );
 
-  assertEquals(await stack.remove(), ["b", true]);
-  assertEquals(await stack.remove(), ["c", true]);
+  assertEquals(await stack.recieve(), ["b", true]);
+  assertEquals(await stack.recieve(), ["c", true]);
 });
 
-Deno.test("add -> close -> remove -> remove", async () => {
+Deno.test("send -> close -> recieve -> recieve", async () => {
   const stack = new Channel<string>(1);
 
-  await stack.add("a");
+  await stack.send("a");
   stack.close();
 
-  assertEquals(await stack.remove(), ["a", true]);
-  assertEquals(await stack.remove(), [undefined, false]);
+  assertEquals(await stack.recieve(), ["a", true]);
+  assertEquals(await stack.recieve(), [undefined, false]);
 });
 
-Deno.test("add -> close -> remove -> add", async () => {
+Deno.test("send -> close -> recieve -> send", async () => {
   const stack = new Channel<string>(1);
 
-  await stack.add("a");
+  await stack.send("a");
   stack.close();
 
-  assertEquals(await stack.remove(), ["a", true]);
+  assertEquals(await stack.recieve(), ["a", true]);
   assertThrowsAsync(
-    () => stack.add("b"),
+    () => stack.send("b"),
     InvalidTransitionError,
-    new InvalidTransitionError(Closed, Transition.ADD).message,
+    new InvalidTransitionError(Closed, Transition.SEND).message,
   );
 });
-Deno.test("add -> close -> add", async () => {
+Deno.test("send -> close -> send", async () => {
   const stack = new Channel<string>(1);
 
-  await stack.add("a");
+  await stack.send("a");
   stack.close();
 
   assertThrowsAsync(
-    () => stack.add("b"),
+    () => stack.send("b"),
     InvalidTransitionError,
-    new InvalidTransitionError(Closed, Transition.ADD).message,
+    new InvalidTransitionError(Closed, Transition.SEND).message,
   );
 });
 
@@ -156,8 +156,8 @@ Deno.test("select when 1 channel is buffered", async () => {
 
   const ctrl = new AbortController();
 
-  c1.add("c1", ctrl).then(() => fail("Should have failed"), () => {});
-  c2.add("c2", ctrl).catch((err) => fail(err));
+  c1.send("c1", ctrl).then(() => fail("Should have failed"), () => {});
+  c2.send("c2", ctrl).catch((err) => fail(err));
 
   const [val, selectedChannel] = await select([c1, c2]);
   ctrl.abort();
@@ -165,7 +165,7 @@ Deno.test("select when 1 channel is buffered", async () => {
   assertEquals(val, "c2");
 });
 
-Deno.test("select add when 1 has buffer", async () => {
+Deno.test("select send when 1 has buffer", async () => {
   const c1 = new Channel<string>(0);
   const c2 = new Channel<string>(1);
 

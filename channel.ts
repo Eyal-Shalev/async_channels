@@ -1,9 +1,9 @@
 import { Queue } from "./internal/queue.ts";
 import {
-  AddStuck,
   Closed,
   Idle,
-  RemoveStuck,
+  RecieveStuck,
+  SendStuck,
   State,
   Transition,
   WaitingForAck,
@@ -39,7 +39,7 @@ export class Channel<T> {
         this.transitionEventTarget.addEventListener(t, reporter("Transition"));
       });
 
-      [Idle, RemoveStuck, AddStuck, WaitingForAck].forEach((state) => {
+      [Idle, RecieveStuck, SendStuck, WaitingForAck].forEach((state) => {
         this.stateEventTarget.addEventListener(state.name, reporter("State"));
       });
     }
@@ -49,13 +49,13 @@ export class Channel<T> {
     this.updateState(Transition.CLOSE);
   }
 
-  public async remove(
+  public async recieve(
     abortCtrl?: AbortController,
   ): Promise<[T, true] | [undefined, false]> {
-    this.debug("remove()");
+    this.debug("recieve()");
     const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
 
-    if ([RemoveStuck, WaitingForAck].includes(this.current)) {
+    if ([RecieveStuck, WaitingForAck].includes(this.current)) {
       await (abortPromise
         ? Promise.race([
           this.waitForState(Idle, Closed),
@@ -64,7 +64,7 @@ export class Channel<T> {
         : this.waitForState(Idle, Closed));
     }
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("remove");
+    if (abortCtrl?.signal.aborted) throw new AbortedError("recieve");
 
     if ([Idle, Closed].includes(this.current) && !this.queue.isEmpty) {
       abortCtrl?.abort();
@@ -79,13 +79,13 @@ export class Channel<T> {
     // Register to the WaitingForAck event before transitioning to guarantee order.
     const waitForAckPromise = this.waitForState(WaitingForAck);
 
-    this.updateState(Transition.REMOVE);
+    this.updateState(Transition.RECIEVE);
     const val =
       await (abortPromise
         ? Promise.race([waitForAckPromise, abortPromise])
         : waitForAckPromise);
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("remove");
+    if (abortCtrl?.signal.aborted) throw new AbortedError("recieve");
 
     abortCtrl?.abort();
     this.updateState(Transition.ACK);
@@ -97,17 +97,17 @@ export class Channel<T> {
     return [valToReturn, true];
   }
 
-  public async add(val: T, abortCtrl?: AbortController): Promise<void> {
-    this.debug(`add(${val})`);
+  public async send(val: T, abortCtrl?: AbortController): Promise<void> {
+    this.debug(`send(${val})`);
     const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
 
-    if ([AddStuck, WaitingForAck].includes(this.current)) {
+    if ([SendStuck, WaitingForAck].includes(this.current)) {
       await (abortPromise
         ? Promise.race([this.waitForState(Idle)])
         : this.waitForState(Idle));
     }
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("add");
+    if (abortCtrl?.signal.aborted) throw new AbortedError("send");
 
     if (this.current === Idle && !this.queue.isFull) {
       abortCtrl?.abort();
@@ -115,26 +115,26 @@ export class Channel<T> {
       return;
     }
 
-    // Register to the RemoveStuck event before transitioning to guarantee order.
-    const removeStuckPromise = this.current === RemoveStuck
+    // Register to the RecieveStuck event before transitioning to guarantee order.
+    const recieveStuckPromise = this.current === RecieveStuck
       ? Promise.resolve()
-      : this.waitForState(RemoveStuck);
+      : this.waitForState(RecieveStuck);
 
-    this.updateState(Transition.ADD, val);
+    this.updateState(Transition.SEND, val);
     if (this.current === Idle) {
       abortCtrl?.abort();
       return;
     }
 
     await (abortPromise
-      ? Promise.race([removeStuckPromise, abortPromise])
-      : removeStuckPromise);
+      ? Promise.race([recieveStuckPromise, abortPromise])
+      : recieveStuckPromise);
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("add");
+    if (abortCtrl?.signal.aborted) throw new AbortedError("send");
     abortCtrl?.abort();
 
-    if (this.current === RemoveStuck) {
-      return this.updateState(Transition.ADD, val);
+    if (this.current === RecieveStuck) {
+      return this.updateState(Transition.SEND, val);
     }
   }
 
@@ -211,7 +211,7 @@ export function makeAbortPromise(abortCtrl: AbortController) {
 }
 
 export class AbortedError extends Error {
-  constructor(type: "add" | "remove") {
+  constructor(type: "send" | "recieve") {
     super(`${type} aborted`);
   }
 }
@@ -227,9 +227,9 @@ export async function select<T>(
   const abortCtrl = new AbortController();
   const selectPromises: Promise<void | T | undefined>[] = items.map((item) => {
     if (item instanceof Channel) {
-      return item.remove(abortCtrl).then(([val]) => val);
+      return item.recieve(abortCtrl).then(([val]) => val);
     }
-    return item[0].add(item[1], abortCtrl);
+    return item[0].send(item[1], abortCtrl);
   });
 
   let defaultPromise = Promise.reject<T>();

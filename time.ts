@@ -23,7 +23,7 @@ export class Timer {
    * For example, assuming the program has not received from t.C already:
    *
    *     if (!t.stop()) {
-   *       t.c.remove()
+   *       t.c.recieve()
    *     }
    *
    * This cannot be done concurrent to other receives from the Timer's
@@ -57,7 +57,7 @@ export class Timer {
    * before being stopped—the channel explicitly drained:
    *
    *     if (!t.stop()) {
-   *       t.c.remove()
+   *       t.c.recieve()
    *     }
    *     t.reset(d)
    *
@@ -82,7 +82,7 @@ export class Timer {
     const wasAborted = this.ctrl?.signal.aborted;
     this.ctrl = new AbortController();
     this.timeoutId = setTimeout(() => {
-      this.c.add(new Date(), this.ctrl).catch();
+      this.c.send(new Date(), this.ctrl).catch();
     }, duration);
     return wasAborted;
   }
