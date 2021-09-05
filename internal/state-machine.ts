@@ -9,8 +9,8 @@ export class InvalidTransitionError extends TypeError {
 }
 
 export enum Transition {
-  REMOVE = "REMOVE",
-  ADD = "ADD",
+  RECEIVE = "RECEIVE",
+  SEND = "SEND",
   ACK = "ACK",
   CLOSE = "CLOSE",
 }
@@ -25,27 +25,27 @@ export type State = (t: Transition) => State;
  */
 export function Idle(t: Transition): State {
   if (t === Transition.CLOSE) return Closed;
-  if (t === Transition.REMOVE) return RemoveStuck;
-  if (t === Transition.ADD) return AddStuck;
+  if (t === Transition.RECEIVE) return ReceiveStuck;
+  if (t === Transition.SEND) return SendStuck;
   throw new InvalidTransitionError(Idle, t);
 }
 
 /**
  * @throws {InvalidTransitionError}
  */
-export function RemoveStuck(t: Transition): State {
+export function ReceiveStuck(t: Transition): State {
   if (t === Transition.CLOSE) return Closed;
-  if (t === Transition.ADD) return WaitingForAck;
-  throw new InvalidTransitionError(RemoveStuck, t);
+  if (t === Transition.SEND) return WaitingForAck;
+  throw new InvalidTransitionError(ReceiveStuck, t);
 }
 
 /**
  * @throws {InvalidTransitionError}
  */
-export function AddStuck(t: Transition): State {
+export function SendStuck(t: Transition): State {
   if (t === Transition.CLOSE) return Closed;
-  if (t === Transition.REMOVE) return RemoveStuck;
-  throw new InvalidTransitionError(AddStuck, t);
+  if (t === Transition.RECEIVE) return ReceiveStuck;
+  throw new InvalidTransitionError(SendStuck, t);
 }
 
 /**
