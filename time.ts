@@ -1,7 +1,7 @@
-import { Channel } from "./channel.ts";
+import { Channel, Receiver } from "./channel.ts";
 
 export class Timer {
-  public readonly c = new Channel<Date>(1);
+  readonly #c = new Channel<Date>(1);
   // @ts-ignore strictPropertyInitialization - initialized in Timer.reset
   protected ctrl: AbortController;
   // @ts-ignore strictPropertyInitialization - initialized in Timer.reset
@@ -9,6 +9,10 @@ export class Timer {
 
   constructor(duration: number) {
     this.reset(duration);
+  }
+
+  get c(): Receiver<Date> {
+    return this.#c;
   }
 
   /**
@@ -82,7 +86,7 @@ export class Timer {
     const wasAborted = this.ctrl?.signal.aborted;
     this.ctrl = new AbortController();
     this.timeoutId = setTimeout(() => {
-      this.c.send(new Date(), this.ctrl).catch();
+      this.#c.send(new Date(), this.ctrl).catch();
     }, duration);
     return wasAborted;
   }

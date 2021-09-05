@@ -14,7 +14,23 @@ export interface ChannelOptions {
   debugExtra?: Record<string, unknown>;
 }
 
-export class Channel<T> {
+export interface Closer {
+  close(): void;
+}
+
+export interface Sender<T> {
+  send(val: T, abortCtrl?: AbortController): Promise<void>;
+}
+
+export interface Receiver<T> {
+  receive(abortCtrl?: AbortController): Promise<[T, true] | [undefined, false]>;
+}
+
+export type SendCloser<T> = Sender<T> & Closer;
+export type ReceiveClose<T> = Receiver<T> & Closer;
+export type SendReceiver<T> = Sender<T> & Receiver<T>;
+
+export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
   protected currentVal?: T;
   protected current: State = Idle;
   protected transitionEventTarget = new EventTarget();
