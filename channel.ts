@@ -2,7 +2,7 @@ import { Queue } from "./internal/queue.ts";
 import {
   Closed,
   Idle,
-  RecieveStuck,
+  ReceiveStuck,
   SendStuck,
   State,
   Transition,
@@ -39,7 +39,7 @@ export class Channel<T> {
         this.transitionEventTarget.addEventListener(t, reporter("Transition"));
       });
 
-      [Idle, RecieveStuck, SendStuck, WaitingForAck].forEach((state) => {
+      [Idle, ReceiveStuck, SendStuck, WaitingForAck].forEach((state) => {
         this.stateEventTarget.addEventListener(state.name, reporter("State"));
       });
     }
@@ -49,13 +49,13 @@ export class Channel<T> {
     this.updateState(Transition.CLOSE);
   }
 
-  public async recieve(
+  public async receive(
     abortCtrl?: AbortController,
   ): Promise<[T, true] | [undefined, false]> {
-    this.debug("recieve()");
+    this.debug("receive()");
     const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
 
-    if ([RecieveStuck, WaitingForAck].includes(this.current)) {
+    if ([ReceiveStuck, WaitingForAck].includes(this.current)) {
       await (abortPromise
         ? Promise.race([
           this.waitForState(Idle, Closed),
@@ -64,7 +64,7 @@ export class Channel<T> {
         : this.waitForState(Idle, Closed));
     }
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("recieve");
+    if (abortCtrl?.signal.aborted) throw new AbortedError("receive");
 
     if ([Idle, Closed].includes(this.current) && !this.queue.isEmpty) {
       abortCtrl?.abort();
@@ -79,13 +79,13 @@ export class Channel<T> {
     // Register to the WaitingForAck event before transitioning to guarantee order.
     const waitForAckPromise = this.waitForState(WaitingForAck);
 
-    this.updateState(Transition.RECIEVE);
+    this.updateState(Transition.RECEIVE);
     const val =
       await (abortPromise
         ? Promise.race([waitForAckPromise, abortPromise])
         : waitForAckPromise);
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("recieve");
+    if (abortCtrl?.signal.aborted) throw new AbortedError("receive");
 
     abortCtrl?.abort();
     this.updateState(Transition.ACK);
@@ -115,10 +115,10 @@ export class Channel<T> {
       return;
     }
 
-    // Register to the RecieveStuck event before transitioning to guarantee order.
-    const recieveStuckPromise = this.current === RecieveStuck
+    // Register to the ReceiveStuck event before transitioning to guarantee order.
+    const receiveStuckPromise = this.current === ReceiveStuck
       ? Promise.resolve()
-      : this.waitForState(RecieveStuck);
+      : this.waitForState(ReceiveStuck);
 
     this.updateState(Transition.SEND, val);
     if (this.current === Idle) {
@@ -127,13 +127,13 @@ export class Channel<T> {
     }
 
     await (abortPromise
-      ? Promise.race([recieveStuckPromise, abortPromise])
-      : recieveStuckPromise);
+      ? Promise.race([receiveStuckPromise, abortPromise])
+      : receiveStuckPromise);
 
     if (abortCtrl?.signal.aborted) throw new AbortedError("send");
     abortCtrl?.abort();
 
-    if (this.current === RecieveStuck) {
+    if (this.current === ReceiveStuck) {
       return this.updateState(Transition.SEND, val);
     }
   }
@@ -211,7 +211,7 @@ export function makeAbortPromise(abortCtrl: AbortController) {
 }
 
 export class AbortedError extends Error {
-  constructor(type: "send" | "recieve") {
+  constructor(type: "send" | "receive") {
     super(`${type} aborted`);
   }
 }
@@ -227,7 +227,7 @@ export async function select<T>(
   const abortCtrl = new AbortController();
   const selectPromises: Promise<void | T | undefined>[] = items.map((item) => {
     if (item instanceof Channel) {
-      return item.recieve(abortCtrl).then(([val]) => val);
+      return item.receive(abortCtrl).then(([val]) => val);
     }
     return item[0].send(item[1], abortCtrl);
   });

@@ -9,7 +9,7 @@ export class InvalidTransitionError extends TypeError {
 }
 
 export enum Transition {
-  RECIEVE = "RECIEVE",
+  RECEIVE = "RECEIVE",
   SEND = "SEND",
   ACK = "ACK",
   CLOSE = "CLOSE",
@@ -25,7 +25,7 @@ export type State = (t: Transition) => State;
  */
 export function Idle(t: Transition): State {
   if (t === Transition.CLOSE) return Closed;
-  if (t === Transition.RECIEVE) return RecieveStuck;
+  if (t === Transition.RECEIVE) return ReceiveStuck;
   if (t === Transition.SEND) return SendStuck;
   throw new InvalidTransitionError(Idle, t);
 }
@@ -33,10 +33,10 @@ export function Idle(t: Transition): State {
 /**
  * @throws {InvalidTransitionError}
  */
-export function RecieveStuck(t: Transition): State {
+export function ReceiveStuck(t: Transition): State {
   if (t === Transition.CLOSE) return Closed;
   if (t === Transition.SEND) return WaitingForAck;
-  throw new InvalidTransitionError(RecieveStuck, t);
+  throw new InvalidTransitionError(ReceiveStuck, t);
 }
 
 /**
@@ -44,7 +44,7 @@ export function RecieveStuck(t: Transition): State {
  */
 export function SendStuck(t: Transition): State {
   if (t === Transition.CLOSE) return Closed;
-  if (t === Transition.RECIEVE) return RecieveStuck;
+  if (t === Transition.RECEIVE) return ReceiveStuck;
   throw new InvalidTransitionError(SendStuck, t);
 }
 

@@ -23,7 +23,7 @@ export class Timer {
    * For example, assuming the program has not received from t.C already:
    *
    *     if (!t.stop()) {
-   *       t.c.recieve()
+   *       t.c.receive()
    *     }
    *
    * This cannot be done concurrent to other receives from the Timer's
@@ -57,7 +57,7 @@ export class Timer {
    * before being stopped—the channel explicitly drained:
    *
    *     if (!t.stop()) {
-   *       t.c.recieve()
+   *       t.c.receive()
    *     }
    *     t.reset(d)
    *
