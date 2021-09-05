@@ -1,4 +1,13 @@
 {
+  "https://cdn.skypack.dev/-/assertion-error@v1.1.0-kNvqltoxcdROsufUrL09/dist=es2020,mode=imports/optimized/assertion-error.js": "fb392c145699a7beacbabe94b21ee5d0219707929450fffbb18eb83b8318c818",
+  "https://cdn.skypack.dev/-/chai@v4.3.4-4LD1LjgHWVQjvyMFe7sm/dist=es2020,mode=imports/optimized/chai.js": "f57d8a3113ef159a2e00f373bd4ab81fab3e48ec67da5c26894b37e9ded2a6f9",
+  "https://cdn.skypack.dev/-/chai@v4.3.4-4LD1LjgHWVQjvyMFe7sm/dist=es2020,mode=types/index.d.ts": "b6c73080490a06c472c0f05afba3b564b170f39bbaeca57d0b60a6bcd98a840c",
+  "https://cdn.skypack.dev/-/check-error@v1.0.2-pv7N1FcwI8awT920b4E0/dist=es2020,mode=imports/optimized/check-error.js": "c00358ede04680f37b081564d88b9457e9812bb3c5c7effc90acb090f3bd73f4",
+  "https://cdn.skypack.dev/-/deep-eql@v3.0.1-EVT6yn6LFH7vvQx4YnOu/dist=es2020,mode=imports/optimized/deep-eql.js": "5cffa444381dd7866ef6f88808392e0292f83387d2258c0609ec72e18f2912ce",
+  "https://cdn.skypack.dev/-/get-func-name@v2.0.0-scW92yE6OFNJbvjxk2uF/dist=es2020,mode=imports/optimized/get-func-name.js": "8926a16a678d5ca12cae705fa8a5be600aaf5355e601d34575f1bd9af64a170c",
+  "https://cdn.skypack.dev/-/pathval@v1.1.1-4hf44tKt2vdiXpyywiwN/dist=es2020,mode=imports/optimized/pathval.js": "778f821f97d08e946a894e3b94635a63121d8bd5000aeb3d00785318d5ed32de",
+  "https://cdn.skypack.dev/-/type-detect@v4.0.8-3tmjjwwFw2jHiLYy7SbM/dist=es2020,mode=imports/optimized/type-detect.js": "eb7ac639d3de6a0b64aaf9032a5b01ab79afb7c768cc02c07956613ecbd0bd32",
+  "https://cdn.skypack.dev/chai@^v4.3.4?dts": "55cfe95f8907bd7f203d1effc4f14a673c3954123a026a7a1e61914d802ddfd9",
   "https://deno.land/std@0.106.0/fmt/colors.ts": "d2f8355f00a74404668fc5a1e4a92983ce1a9b0a6ac1d40efbd681cb8f519586",
   "https://deno.land/std@0.106.0/testing/_diff.ts": "5d3693155f561d1a5443ac751ac70aab9f5d67b4819a621d4b96b8a1a1c89620",
   "https://deno.land/std@0.106.0/testing/asserts.ts": "5f3a0fddb15a9733e44737e2d52be8e696bb79bc4e3830a9f246c5b8f3b29b31"

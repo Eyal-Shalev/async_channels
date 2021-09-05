@@ -1,26 +1,19 @@
 import { assert, fail } from "deno/testing/asserts.ts";
 import { timeout, Timer } from "./time.ts";
+import chai from "chai";
 
 Deno.test("The timer returns results withing resonable margin of error", async () => {
   await Promise.all([50, 100, 200].map(async (duration) => {
     const start = new Date();
     const t = new Timer(duration);
     const res = await t.c.receive();
+    const current = new Date();
     if (!res[1]) fail("unreachable");
     const val = res[0];
-    const current = new Date();
-    assert(
-      current.getTime() - val.getTime() < 15,
-      JSON.stringify({ current, val }),
-    );
-    assert(
-      val.getTime() - start.getTime() >= duration,
-      JSON.stringify({ val, start }),
-    );
-    assert(
-      val.getTime() - start.getTime() < duration + 10,
-      JSON.stringify({ val, start }),
-    );
+    chai.expect(current.getTime() - val.getTime())
+      .to.be.within(0, 10);
+    chai.expect(val.getTime() - start.getTime())
+      .to.be.within(duration, duration + 10);
   }));
 });
 
