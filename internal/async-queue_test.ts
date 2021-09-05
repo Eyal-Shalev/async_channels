@@ -1,7 +1,8 @@
 #!/usr/bin/env -S deno test --lock lock.test.json --import-map import_map.json
 
-import { assertEquals } from "deno/testing/asserts.ts";
+import { assertEquals, assertThrowsAsync } from "deno/testing/asserts.ts";
 import { AsyncQueue } from "./async-queue.ts";
+import { Closed, InvalidTransitionError, Transition } from "./state-machine.ts";
 
 Deno.test("no-buffer remove -> add", async () => {
   const stack = new AsyncQueue<string>(0);
@@ -104,4 +105,40 @@ Deno.test("buffered add -> add -> add -> remove -> remove -> remove", async () =
 
   assertEquals(await stack.remove(), ["b", true]);
   assertEquals(await stack.remove(), ["c", true]);
+});
+
+Deno.test("add -> close -> remove -> remove", async () => {
+  const stack = new AsyncQueue<string>(1);
+
+  await stack.add("a");
+  stack.close();
+
+  assertEquals(await stack.remove(), ["a", true]);
+  assertEquals(await stack.remove(), [undefined, false]);
+});
+
+Deno.test("add -> close -> remove -> add", async () => {
+  const stack = new AsyncQueue<string>(1);
+
+  await stack.add("a");
+  stack.close();
+
+  assertEquals(await stack.remove(), ["a", true]);
+  assertThrowsAsync(
+    () => stack.add("b"),
+    InvalidTransitionError,
+    new InvalidTransitionError(Closed, Transition.ADD).message,
+  );
+});
+Deno.test("add -> close -> add", async () => {
+  const stack = new AsyncQueue<string>(1);
+
+  await stack.add("a");
+  stack.close();
+
+  assertThrowsAsync(
+    () => stack.add("b"),
+    InvalidTransitionError,
+    new InvalidTransitionError(Closed, Transition.ADD).message,
+  );
 });

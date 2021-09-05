@@ -66,14 +66,14 @@ export class AsyncQueue<T> {
 
     if (abortCtrl?.signal.aborted) throw new AbortedError("remove");
 
+    if ([Idle, Closed].includes(this.current) && !this.queue.isEmpty) {
+      abortCtrl?.abort();
+      return [this.queue.remove(), true];
+    }
+
     if (this.current === Closed) {
       abortCtrl?.abort();
       return [undefined, false];
-    }
-
-    if (this.current === Idle && !this.queue.isEmpty) {
-      abortCtrl?.abort();
-      return [this.queue.remove(), true];
     }
 
     // Register to the WaitingForAck event before transitioning to guarantee order.
