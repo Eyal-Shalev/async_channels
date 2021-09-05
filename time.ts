@@ -1,13 +1,21 @@
-import { Channel, Receiver } from "./channel.ts";
+import { Channel, ChannelOptions, Receiver } from "./channel.ts";
+
+export enum Duration {
+  Millisecond = 1,
+  Second = Millisecond * 1000,
+  Minute = Second * 60,
+  Hour = Minute * 60,
+}
 
 export class Timer {
-  readonly #c = new Channel<Date>(1);
-  // @ts-ignore strictPropertyInitialization - initialized in Timer.reset
+  readonly #c: Channel<Date>;
+  // @ts-ignore strictPropertyInitialization - initialized in constructor using reset().
   protected ctrl: AbortController;
-  // @ts-ignore strictPropertyInitialization - initialized in Timer.reset
+  // @ts-ignore strictPropertyInitialization - initialized in constructor using reset().
   protected timeoutId: number;
 
-  constructor(duration: number) {
+  constructor(duration: number, options?: ChannelOptions) {
+    this.#c = new Channel<Date>(1, options);
     this.reset(duration);
   }
 
@@ -47,16 +55,15 @@ export class Timer {
   }
 
   /**
-   * reset changes the timer to expire after duration d.
-   * It returns true if the timer had been active, false if the timer had
+   * reset changes the timer to expire after `duration`.
+   * It returns `true` if the timer had been active, `false` if the timer had
    * expired or been stopped.
    *
-   * For a Timer created with NewTimer, reset should be invoked only on
-   * stopped or expired timers with drained channels.
+   * reset should be invoked only on stopped or expired timers with drained channels.
    *
-   * If a program has already received a value from t.C, the timer is known
-   * to have expired and the channel drained, so t.reset can be used directly.
-   * If a program has not yet received a value from t.C, however,
+   * If a program has already received a value from `t.c`, the timer is known
+   * to have expired and the channel drained, so `t.reset()` can be used directly.
+   * If a program has not yet received a value from `t.c`, however,
    * the timer must be stopped and—if stop reports that the timer expired
    * before being stopped—the channel explicitly drained:
    *
@@ -73,14 +80,12 @@ export class Timer {
    * reset should always be invoked on stopped or expired channels, as described above.
    * The return value exists to preserve compatibility with existing programs.
    *
-   * For a Timer created with AfterFunc(d, f), reset either reschedules
-   * when f will run, in which case reset returns true, or schedules f
-   * to run again, in which case it returns false.
-   * When reset returns false, reset neither waits for the prior f to
-   * complete before returning nor does it guarantee that the subsequent
-   * goroutine running f does not run concurrently with the prior
-   * one. If the caller needs to know whether the prior execution of
-   * f is completed, it must coordinate with f explicitly.
+   * For a `Timer` created with `AfterFunc(d, f)`, reset either reschedules
+   * when `f` will run, in which case reset returns `true`, or schedules `f`
+   * to run again, in which case it returns `false`.
+   * When reset returns `false`, reset doesn't wait for the prior `f` to
+   * complete before returning. If the caller needs to know whether the prior execution of
+   * `f` is completed, it must coordinate with `f` explicitly.
    */
   reset(duration: number): boolean {
     const wasAborted = this.ctrl?.signal.aborted;
@@ -91,3 +96,9 @@ export class Timer {
     return wasAborted;
   }
 }
+
+export const timeout = (duration: number): Receiver<void> => {
+  const c = new Channel<void>(0);
+  setTimeout(() => c.close(), duration);
+  return c;
+};
