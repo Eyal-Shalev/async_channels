@@ -99,6 +99,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: true
+          automatic_release_tag: latest
           files: |
             LICENSE
             README.md
