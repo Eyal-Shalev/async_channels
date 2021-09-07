@@ -1,5 +1,5 @@
 export class InvalidTransitionError extends TypeError {
-  constructor(state: State, t: Transition) {
+  constructor(readonly state: State, readonly t: Transition) {
     super(
       `Invalid transition - ${
         JSON.stringify({ state: state.name, transition: t })
@@ -62,6 +62,5 @@ export function WaitingForAck(t: Transition): State {
  */
 export function Closed(t: Transition): State {
   if (t === Transition.CLOSE) return Closed;
-  // if (t === Transition.ACK) return Closed;
   throw new InvalidTransitionError(Closed, t);
 }

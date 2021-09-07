@@ -162,24 +162,29 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
     await waitForIdlePromise;
   }
 
+  /**
+   * ```ts
+   * import {Channel} from "./channel.ts";
+   *
+   * const ch = new Channel<string>(0);
+   * (async () => {
+   *   await ch.send("foo");
+   *   await ch.send("bar");
+   *   ch.close();
+   * })()
+   * const expected = ["foo", "bar"]
+   * for await (const msg of ch) {
+   *   console.assert(msg === expected.shift());
+   * }
+   * ```
+   * @returns {AsyncGenerator<T, void, void>}
+   */
   public async *[Symbol.asyncIterator](): AsyncGenerator<T, void, void> {
     while (true) {
       const res = await this.receive();
       if (!res[1]) return;
       yield res[0];
     }
-  }
-
-  public peek(): T {
-    return this.queue.peek();
-  }
-
-  public get isFull(): boolean {
-    return this.queue.isFull;
-  }
-
-  public get isEmpty(): boolean {
-    return this.queue.isEmpty;
   }
 
   /**
