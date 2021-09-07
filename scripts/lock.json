@@ -1,0 +1,23 @@
+{
+  "https://cdn.skypack.dev/-/assertion-error@v1.1.0-kNvqltoxcdROsufUrL09/dist=es2020,mode=imports/optimized/assertion-error.js": "fb392c145699a7beacbabe94b21ee5d0219707929450fffbb18eb83b8318c818",
+  "https://cdn.skypack.dev/-/chai@v4.3.4-4LD1LjgHWVQjvyMFe7sm/dist=es2020,mode=imports/optimized/chai.js": "f57d8a3113ef159a2e00f373bd4ab81fab3e48ec67da5c26894b37e9ded2a6f9",
+  "https://cdn.skypack.dev/-/chai@v4.3.4-4LD1LjgHWVQjvyMFe7sm/dist=es2020,mode=types/index.d.ts": "b6c73080490a06c472c0f05afba3b564b170f39bbaeca57d0b60a6bcd98a840c",
+  "https://cdn.skypack.dev/-/check-error@v1.0.2-pv7N1FcwI8awT920b4E0/dist=es2020,mode=imports/optimized/check-error.js": "c00358ede04680f37b081564d88b9457e9812bb3c5c7effc90acb090f3bd73f4",
+  "https://cdn.skypack.dev/-/deep-eql@v3.0.1-EVT6yn6LFH7vvQx4YnOu/dist=es2020,mode=imports/optimized/deep-eql.js": "5cffa444381dd7866ef6f88808392e0292f83387d2258c0609ec72e18f2912ce",
+  "https://cdn.skypack.dev/-/get-func-name@v2.0.0-scW92yE6OFNJbvjxk2uF/dist=es2020,mode=imports/optimized/get-func-name.js": "8926a16a678d5ca12cae705fa8a5be600aaf5355e601d34575f1bd9af64a170c",
+  "https://cdn.skypack.dev/-/pathval@v1.1.1-4hf44tKt2vdiXpyywiwN/dist=es2020,mode=imports/optimized/pathval.js": "778f821f97d08e946a894e3b94635a63121d8bd5000aeb3d00785318d5ed32de",
+  "https://cdn.skypack.dev/-/type-detect@v4.0.8-3tmjjwwFw2jHiLYy7SbM/dist=es2020,mode=imports/optimized/type-detect.js": "eb7ac639d3de6a0b64aaf9032a5b01ab79afb7c768cc02c07956613ecbd0bd32",
+  "https://cdn.skypack.dev/chai@^v4.3.4?dts": "55cfe95f8907bd7f203d1effc4f14a673c3954123a026a7a1e61914d802ddfd9",
+  "https://deno.land/std@0.106.0/_util/assert.ts": "2f868145a042a11d5ad0a3c748dcf580add8a0dbc0e876eaa0026303a5488f58",
+  "https://deno.land/std@0.106.0/_util/os.ts": "dfb186cc4e968c770ab6cc3288bd65f4871be03b93beecae57d657232ecffcac",
+  "https://deno.land/std@0.106.0/path/_constants.ts": "1247fee4a79b70c89f23499691ef169b41b6ccf01887a0abd131009c5581b853",
+  "https://deno.land/std@0.106.0/path/_interface.ts": "1fa73b02aaa24867e481a48492b44f2598cd9dfa513c7b34001437007d3642e4",
+  "https://deno.land/std@0.106.0/path/_util.ts": "2e06a3b9e79beaf62687196bd4b60a4c391d862cfa007a20fc3a39f778ba073b",
+  "https://deno.land/std@0.106.0/path/common.ts": "eaf03d08b569e8a87e674e4e265e099f237472b6fd135b3cbeae5827035ea14a",
+  "https://deno.land/std@0.106.0/path/glob.ts": "3b84af55c53febacf6afe214c095624b22a56b6f57d7312157479cc783a0de65",
+  "https://deno.land/std@0.106.0/path/mod.ts": "4465dc494f271b02569edbb4a18d727063b5dbd6ed84283ff906260970a15d12",
+  "https://deno.land/std@0.106.0/path/posix.ts": "b81974c768d298f8dcd2c720229639b3803ca4a241fa9a355c762fa2bc5ef0c1",
+  "https://deno.land/std@0.106.0/path/separator.ts": "8fdcf289b1b76fd726a508f57d3370ca029ae6976fcde5044007f062e643ff1c",
+  "https://deno.land/std@0.106.0/path/win32.ts": "f4a3d4a3f2c9fe894da046d5eac48b5e789a0ebec5152b2c0985efe96a9f7ae1",
+  "https://deno.land/x/semver@v1.4.0/mod.ts": "c3e08f7f0a3e625015ecc9a46cf79a9dc3f081f3c5b3037d3c49c0773e58d265"
+}
