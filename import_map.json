@@ -1,5 +1,6 @@
 {
   "imports": {
-    "deno/": "https://deno.land/std@0.106.0/"
+    "deno/": "https://deno.land/std@0.106.0/",
+    "chai": "https://cdn.skypack.dev/chai@^v4.3.4?dts"
   }
 }
