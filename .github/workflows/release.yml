@@ -68,6 +68,7 @@ jobs:
       - name: Create Bundles
         working-directory: artifact
         run: |
+          ls -la
           for f in $FORMATS; do rollup dist/bundle.js --file dist/"$f".bundle.js --format "$f" --name "$camelCaseName"; done
           for f in $FORMATS; do rollup dist/bundle.js --file dist/"$f".bundle.min.js --format "$f" --name "$camelCaseName" --plugin terser; done
 
