@@ -1,7 +1,6 @@
 {
   "imports": {
     "deno/": "https://deno.land/std@0.106.0/",
-    "chai": "https://cdn.skypack.dev/chai@^v4.3.4?dts",
     "semver": "https://deno.land/x/semver@v1.4.0/mod.ts"
   }
 }
