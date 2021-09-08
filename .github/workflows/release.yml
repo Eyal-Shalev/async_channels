@@ -34,6 +34,8 @@ jobs:
         run: bash ./scripts/package-json.bash
 
       - uses: actions/upload-artifact@v2
+        with:
+          path: "."
 
   rollup:
     name: Rollup
@@ -65,6 +67,8 @@ jobs:
           for f in $FORMATS; do rollup dist/bundle.js --file dist/"$f".bundle.min.js --format "$f" --name "$camelCaseName" --plugin terser; done
 
       - uses: actions/upload-artifact@v2
+        with:
+          path: "."
 
   publish:
     name: Publish
