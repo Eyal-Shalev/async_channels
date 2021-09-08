@@ -2,3 +2,4 @@
 .vscode
 /dist
 /package.json
+node_modules

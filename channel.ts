@@ -9,6 +9,28 @@ import {
   WaitingForAck,
 } from "./internal/state-machine.ts";
 
+const eventType = (x: Transition | State): string => {
+  return typeof x === "string" ? `Transition::${x}` : `State::${x.name}`;
+};
+
+class ValEvent<T> extends Event {
+  constructor(type: string, readonly val?: T, eventInitDict?: EventInit) {
+    super(type, eventInitDict);
+  }
+}
+
+class TransitionEvent<T> extends ValEvent<T> {
+  constructor(readonly t: Transition, val?: T, eventInitDict?: EventInit) {
+    super(eventType(t), val, eventInitDict);
+  }
+}
+
+class StateEvent<T> extends ValEvent<T> {
+  constructor(readonly state: State, val?: T, eventInitDict?: EventInit) {
+    super(eventType(state), val, eventInitDict);
+  }
+}
+
 export interface ChannelOptions {
   debug?: boolean;
   debugExtra?: Record<string, unknown>;
@@ -38,25 +60,21 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
   protected readonly queue: Queue<T>;
 
   constructor(
-    bufferSize: number,
+    bufferSize = 0,
     protected readonly options?: ChannelOptions,
   ) {
     this.queue = new Queue<T>(bufferSize);
     if (options?.debug) {
       console.log(); // Don't ask...
-      const reporter = (prefix: string) => {
-        return (ev: Event) => {
-          this.debug(`${prefix}::${ev.type}`, {
-            val: (ev as CustomEvent).detail,
-          });
-        };
+      const reporter = (ev: Event) => {
+        this.debug(ev.type, { val: (ev as ValEvent<T>).val });
       };
       Object.values(Transition).forEach((t) => {
-        this.transitionEventTarget.addEventListener(t, reporter("Transition"));
+        this.transitionEventTarget.addEventListener(eventType(t), reporter);
       });
 
       [Idle, ReceiveStuck, SendStuck, WaitingForAck].forEach((state) => {
-        this.stateEventTarget.addEventListener(state.name, reporter("State"));
+        this.stateEventTarget.addEventListener(eventType(state), reporter);
       });
     }
   }
@@ -178,10 +196,10 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
     this.currentVal = val;
     this.current = this.current(t);
     this.transitionEventTarget.dispatchEvent(
-      new CustomEvent(t, { detail: val }),
+      new TransitionEvent(t, val),
     );
     this.stateEventTarget.dispatchEvent(
-      new CustomEvent(this.current.name, { detail: val }),
+      new StateEvent(this.current, val),
     );
   }
 
@@ -192,9 +210,9 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
     }
     return new Promise<T | undefined>((resolve) => {
       states.forEach((state) => {
-        this.stateEventTarget.addEventListener(state.name, (ev) => {
+        this.stateEventTarget.addEventListener(eventType(state), (ev) => {
           scheduleTask(() => {
-            resolve((ev as CustomEvent).detail as T);
+            resolve((ev as ValEvent<T>).val);
           });
         }, { once: true });
       });
@@ -204,8 +222,8 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
   protected waitForTransition(t: Transition): Promise<T | undefined> {
     this.debug("waitForTransition", t);
     return new Promise<T | undefined>((resolve) => {
-      this.transitionEventTarget.addEventListener(t, (ev) => {
-        scheduleTask(() => resolve((ev as CustomEvent).detail as T));
+      this.transitionEventTarget.addEventListener(eventType(t), (ev) => {
+        scheduleTask(() => resolve((ev as ValEvent<T>).val));
       }, { once: true });
     });
   }
