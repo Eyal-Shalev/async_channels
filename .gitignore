@@ -1,2 +1,6 @@
 .idea
 .vscode
+/dist
+/package.json
+node_modules
+package-lock.json

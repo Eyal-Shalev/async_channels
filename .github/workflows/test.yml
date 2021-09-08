@@ -1,4 +1,4 @@
-name: Deno
+name: Test
 
 on:
   push:
@@ -26,4 +26,4 @@ jobs:
         run: deno lint
 
       - name: Run tests
-        run: bash ./run-tests.bash
+        run: bash ./scripts/run-tests.bash

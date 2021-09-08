@@ -1,4 +1,4 @@
-import { expect } from "chai";
+import { assertEquals, assertThrows } from "deno/testing/asserts.ts";
 import {
   Closed,
   Idle,
@@ -40,11 +40,11 @@ const data: [State, Transition, State | false][] = [
 data.forEach(([from, t, to]) => {
   if (to) {
     Deno.test(`${from.name}(${t}) === ${to.name}`, () => {
-      expect(from(t)).to.equal(to);
+      assertEquals(from(t), to);
     });
   } else {
     Deno.test(`${from.name}(${t}) throws InvalidTransitionError`, () => {
-      expect(() => from(t)).to.throw(InvalidTransitionError);
+      assertThrows(() => from(t), InvalidTransitionError);
     });
   }
 });

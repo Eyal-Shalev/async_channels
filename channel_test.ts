@@ -1,19 +1,23 @@
 import { sleep } from "./internal/test_utils.ts";
-import { expect } from "chai";
 import { Channel, select } from "./channel.ts";
 import { InvalidTransitionError } from "./internal/state-machine.ts";
+import { assertEquals, assertThrowsAsync, fail } from "deno/testing/asserts.ts";
 
 Deno.test("no-buffer receive -> send", async () => {
   const chan = new Channel<string>(0);
-  expect(await Promise.all([chan.receive(), chan.send("a")]))
-    .to.deep.equal([["a", true], undefined]);
+  assertEquals(
+    await Promise.all([chan.receive(), chan.send("a")]),
+    [["a", true], undefined],
+  );
 });
 
 Deno.test("no-buffer send -> receive", async () => {
   const chan = new Channel<string>(0);
 
-  expect(await Promise.all([chan.send("a"), chan.receive()]))
-    .to.deep.equal([undefined, ["a", true]]);
+  assertEquals(
+    await Promise.all([chan.send("a"), chan.receive()]),
+    [undefined, ["a", true]],
+  );
 });
 
 Deno.test("no-buffer receive -> receive -> send -> send", async () => {
@@ -26,8 +30,8 @@ Deno.test("no-buffer receive -> receive -> send -> send", async () => {
     chan.send("b"),
   ]);
 
-  expect(getA).to.deep.equal(["a", true]);
-  expect(getB).to.deep.equal(["b", true]);
+  assertEquals(getA, ["a", true]);
+  assertEquals(getB, ["b", true]);
 });
 
 Deno.test("no-buffer send -> send -> receive -> receive", async () => {
@@ -40,8 +44,8 @@ Deno.test("no-buffer send -> send -> receive -> receive", async () => {
     chan.receive(),
   ]);
 
-  expect(getA).to.deep.equal(["a", true]);
-  expect(getB).to.deep.equal(["b", true]);
+  assertEquals(getA, ["a", true]);
+  assertEquals(getB, ["b", true]);
 });
 
 Deno.test("no-buffer send -> receive; receive -> send", async () => {
@@ -50,15 +54,15 @@ Deno.test("no-buffer send -> receive; receive -> send", async () => {
   const [_a, getA] = await Promise.all([chan.send("a"), chan.receive()]);
   const [getB, _b] = await Promise.all([chan.receive(), chan.send("b")]);
 
-  expect(getA).to.deep.equal(["a", true]);
-  expect(getB).to.deep.equal(["b", true]);
+  assertEquals(getA, ["a", true]);
+  assertEquals(getB, ["b", true]);
 });
 
 Deno.test("buffered send -> receive", async () => {
   const chan = new Channel<string>(1);
 
   await chan.send("a");
-  expect(await chan.receive()).to.deep.equal(["a", true]);
+  assertEquals(await chan.receive(), ["a", true]);
 });
 
 Deno.test("buffered send -> send -> receive -> receive", async () => {
@@ -67,17 +71,17 @@ Deno.test("buffered send -> send -> receive -> receive", async () => {
   await chan.send("a");
 
   const [_b, getA] = await Promise.all([chan.send("b"), chan.receive()]);
-  expect(getA).to.deep.equal(["a", true]);
-  expect(await chan.receive()).to.deep.equal(["b", true]);
+  assertEquals(getA, ["a", true]);
+  assertEquals(await chan.receive(), ["b", true]);
 });
 
 Deno.test("buffered send -> receive; receive -> send", async () => {
   const chan = new Channel<string>(1);
 
   await chan.send("a");
-  expect(await chan.receive()).to.deep.equal(["a", true]);
+  assertEquals(await chan.receive(), ["a", true]);
   await chan.send("b");
-  expect(await chan.receive()).to.deep.equal(["b", true]);
+  assertEquals(await chan.receive(), ["b", true]);
 });
 
 Deno.test("buffered send -> send -> send -> receive -> receive -> receive", async () => {
@@ -87,10 +91,10 @@ Deno.test("buffered send -> send -> send -> receive -> receive -> receive", asyn
   await chan.send("b");
 
   const [_c, getA] = await Promise.all([chan.send("c"), chan.receive()]);
-  expect(getA).to.deep.equal(["a", true]);
+  assertEquals(getA, ["a", true]);
 
-  expect(await chan.receive()).to.deep.equal(["b", true]);
-  expect(await chan.receive()).to.deep.equal(["c", true]);
+  assertEquals(await chan.receive(), ["b", true]);
+  assertEquals(await chan.receive(), ["c", true]);
 });
 
 Deno.test("send -> close -> receive -> receive", async () => {
@@ -99,8 +103,8 @@ Deno.test("send -> close -> receive -> receive", async () => {
   await chan.send("a");
   chan.close();
 
-  expect(await chan.receive()).to.deep.equal(["a", true]);
-  expect(await chan.receive()).to.deep.equal([undefined, false]);
+  assertEquals(await chan.receive(), ["a", true]);
+  assertEquals(await chan.receive(), [undefined, false]);
 });
 
 Deno.test("send -> close -> receive -> send", async () => {
@@ -109,11 +113,8 @@ Deno.test("send -> close -> receive -> send", async () => {
   await chan.send("a");
   chan.close();
 
-  expect(await chan.receive()).to.deep.equal(["a", true]);
-  await chan.send("b").then(
-    () => expect.fail(),
-    (e) => expect(e).to.be.an.instanceOf(InvalidTransitionError),
-  );
+  assertEquals(await chan.receive(), ["a", true]);
+  assertThrowsAsync(() => chan.send("b"), InvalidTransitionError);
 });
 Deno.test("send -> close -> send", async () => {
   const chan = new Channel<string>(1);
@@ -121,10 +122,7 @@ Deno.test("send -> close -> send", async () => {
   await chan.send("a");
   chan.close();
 
-  await chan.send("b").then(
-    () => expect.fail(),
-    (e) => expect(e).to.be.an.instanceOf(InvalidTransitionError),
-  );
+  assertThrowsAsync(() => chan.send("b"), InvalidTransitionError);
 });
 
 Deno.test("select when 1 channel is buffered", async () => {
@@ -133,13 +131,13 @@ Deno.test("select when 1 channel is buffered", async () => {
 
   const ctrl = new AbortController();
 
-  c1.send("c1", ctrl).then(() => expect.fail("Should have failed"), () => {});
-  c2.send("c2", ctrl).catch((err) => expect.fail(err));
+  c1.send("c1", ctrl).then(() => fail("Should have failed"), () => {});
+  c2.send("c2", ctrl).catch((err) => fail(err));
 
   const [val, selectedChannel] = await select([c1, c2]);
   ctrl.abort();
-  expect(selectedChannel).to.deep.equal(c2);
-  expect(val).to.deep.equal("c2");
+  assertEquals(selectedChannel, c2);
+  assertEquals(val, "c2");
 });
 
 Deno.test("select send when 1 has buffer", async () => {
@@ -147,8 +145,8 @@ Deno.test("select send when 1 has buffer", async () => {
   const c2 = new Channel<string>(1);
 
   const [val, selectedChannel] = await select([[c1, "c1"], [c2, "c2"]]);
-  expect(val).to.be.true;
-  expect(selectedChannel).to.deep.equal(c2);
+  assertEquals(val, true);
+  assertEquals(selectedChannel, c2);
 });
 
 Deno.test("channel as an async iterator", async () => {
@@ -170,5 +168,5 @@ Deno.test("channel as an async iterator", async () => {
 
   await p;
 
-  expect(out).to.deep.equal(["a", "boo", "b"]);
+  assertEquals(out, ["a", "boo", "b"]);
 });
