@@ -106,6 +106,13 @@ jobs:
         with:
           node-version: 12
 
+      - uses: actions/upload-artifact@v2
+        with:
+          name: debug
+          path: "."
+
+      - run: ls -la
+
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
