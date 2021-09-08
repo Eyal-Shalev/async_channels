@@ -107,8 +107,7 @@ jobs:
         with:
           path: "artifact"
 
-      - uses: marvinpinto/action-automatic-releases@latest
-        working-directory: artifact
+      - uses: marvinpinto/action-automatic-releases@latest 
         if: ${{ steps.get_version.outputs.IS_PRE }}
         with:
           prerelease: true
@@ -116,20 +115,19 @@ jobs:
           title: "Version ${{ steps.get_version.outputs.VERSION }}"
           automatic_release_tag: ${{ steps.get_version.outputs.VERSION }}
           files: |
-            LICENSE
-            README.md
-            dist/*.bundle.js
-            dist/*.bundle.min.js
+            artifact/LICENSE
+            artifact/README.md
+            artifact/dist/*.bundle.js
+            artifact/dist/*.bundle.min.js
 
       - uses: marvinpinto/action-automatic-releases@latest
-        working-directory: artifact
         if: ${{ ! steps.get_version.outputs.IS_PRE }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           title: "Version ${{ steps.get_version.outputs.VERSION }}"
           automatic_release_tag: ${{ steps.get_version.outputs.VERSION }}
           files: |
-            LICENSE
-            README.md
-            dist/*.bundle.js
-            dist/*.bundle.min.js
+            artifact/LICENSE
+            artifact/README.md
+            artifact/dist/*.bundle.js
+            artifact/dist/*.bundle.min.js
