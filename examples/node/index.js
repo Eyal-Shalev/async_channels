@@ -1,4 +1,4 @@
-const { Channel } = require("@eyal-shalev/async-channels");
+import { Channel } from "@eyal-shalev/async-channels";
 
 const ch = new Channel(0);
 
@@ -7,8 +7,6 @@ const ch = new Channel(0);
   await ch.send("world");
 })();
 
-(async () => {
-  for await (const msg of ch) {
-    console.log(msg);
-  }
-});
+for await (const msg of ch) {
+  console.log(msg);
+}
