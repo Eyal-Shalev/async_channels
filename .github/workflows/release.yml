@@ -108,8 +108,8 @@ jobs:
           path: "artifact"
 
       - uses: marvinpinto/action-automatic-releases@latest
-        if: ${{ steps.get_version.outputs.IS_PRE }}
         working-directory: artifact
+        if: ${{ steps.get_version.outputs.IS_PRE }}
         with:
           prerelease: true
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -122,8 +122,8 @@ jobs:
             dist/*.bundle.min.js
 
       - uses: marvinpinto/action-automatic-releases@latest
-        if: ${{ ! steps.get_version.outputs.IS_PRE }}
         working-directory: artifact
+        if: ${{ ! steps.get_version.outputs.IS_PRE }}
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           title: "Version ${{ steps.get_version.outputs.VERSION }}"
