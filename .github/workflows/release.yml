@@ -35,7 +35,8 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          path: "artifact"
+          name: artifact
+          path: "."
 
   rollup:
     name: Rollup
@@ -61,7 +62,8 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          path: "artifact"
+          name: artifact
+          path: "."
 
       - name: Create Bundles
         working-directory: artifact
@@ -71,7 +73,8 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          path: "artifact"
+          name: artifact
+          path: "."
 
   publish:
     name: Publish
@@ -81,12 +84,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         with:
-          path: artifact
+          name: artifact
+          path: "."
       - uses: actions/setup-node@v2
         with:
           node-version: 12
       - run: npm publish
-        working-directory: artifact
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
@@ -105,7 +108,8 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          path: "artifact"
+          name: artifact
+          path: "."
 
       - uses: marvinpinto/action-automatic-releases@latest 
         if: ${{ steps.get_version.outputs.IS_PRE }}
@@ -115,10 +119,10 @@ jobs:
           title: "Version ${{ steps.get_version.outputs.VERSION }}"
           automatic_release_tag: ${{ steps.get_version.outputs.VERSION }}
           files: |
-            artifact/LICENSE
-            artifact/README.md
-            artifact/dist/*.bundle.js
-            artifact/dist/*.bundle.min.js
+            LICENSE
+            README.md
+            dist/*.bundle.js
+            dist/*.bundle.min.js
 
       - uses: marvinpinto/action-automatic-releases@latest
         if: ${{ ! steps.get_version.outputs.IS_PRE }}
@@ -127,7 +131,7 @@ jobs:
           title: "Version ${{ steps.get_version.outputs.VERSION }}"
           automatic_release_tag: ${{ steps.get_version.outputs.VERSION }}
           files: |
-            artifact/LICENSE
-            artifact/README.md
-            artifact/dist/*.bundle.js
-            artifact/dist/*.bundle.min.js
+            LICENSE
+            README.md
+            dist/*.bundle.js
+            dist/*.bundle.min.js
