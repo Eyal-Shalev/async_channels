@@ -1,7 +1,13 @@
-import { h, render } from "https://cdn.skypack.dev/preact";
-import { useEffect, useState } from "https://cdn.skypack.dev/preact/hooks";
-import htm from "https://unpkg.com/htm?module";
-import { Channel } from "https://cdn.skypack.dev/@eyalsh/async-channels";
+import {
+  h,
+  render,
+} from "https://cdn.skypack.dev/pin/preact@v10.5.14-NU6DIzRE0F11UYcL6Ija/mode=imports,min/optimized/preact.js";
+import {
+  useEffect,
+  useState,
+} from "https://cdn.skypack.dev/pin/preact@v10.5.14-NU6DIzRE0F11UYcL6Ija/mode=imports,min/optimized/preact/hooks.js";
+import htm from "https://cdn.skypack.dev/pin/htm@v3.1.0-Lnrl6ooU0xR8YCDnwwW6/mode=imports,min/optimized/htm.js";
+import { Channel } from "https://cdn.skypack.dev/pin/@eyalsh/async-channels@v1.0.0-alpha22-7tfiZXXZ9b16gbM3Whe9/mode=imports/optimized/@eyalsh/async-channels.js";
 
 // Initialize htm with Preact
 const html = htm.bind(h);
@@ -59,6 +65,7 @@ function AddTodoForm({ ch }) {
   </form>`;
 }
 
+// deno-lint-ignore no-unused-vars
 const sleep = (duration) => {
   return new Promise((res) => {
     setTimeout(() => res(), duration);
@@ -68,33 +75,25 @@ const sleep = (duration) => {
 const ch = new Channel(0, { debug: true });
 
 function App() {
-  const [todos, updateTodos] = useState([
-    { label: "hello", done: false },
-    { label: "world", done: true },
-    { label: "1", done: true },
-    { label: "2", done: true },
-    { label: "3", done: true },
-  ]);
+  const [todos, updateTodos] = useState([]);
   useEffect(() => {
     const ctrl = new AbortController();
 
     (async () => {
       const [todo, ok] = await ch.receive(ctrl);
       if (!ok) return;
-      await sleep(500); // Doing heavy work
+
+      // Uncomment below to simulate heavy work with the value
+      // await sleep(1000); // Doing heavy work
 
       const index = todos.findIndex(({ label }) => label === todo.label);
 
-      const newTodos = [
-        ...todos.slice(0, index),
-        todo,
-        ...todos.slice(index + 1, todos.length),
-      ];
-
-      console.log({ index, todos, newTodos });
-
       if (index >= 0) {
-        updateTodos(newTodos);
+        updateTodos([
+          ...todos.slice(0, index),
+          todo,
+          ...todos.slice(index + 1, todos.length),
+        ]);
       } else {
         updateTodos([...todos, todo]);
       }
@@ -102,10 +101,22 @@ function App() {
 
     return () => ctrl.abort();
   }, [todos]);
+
   return html`<div class="container">
     <${Todos} items=${todos} ch=${ch} />
     <${AddTodoForm} ch=${ch} />
+    <footer><${Clock} /></footer>
   </div>`;
+}
+
+function Clock() {
+  const [timestamp, setTimestamp] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setTimestamp(new Date()), 1);
+    return () => clearInterval(id);
+  }, []);
+
+  return html`<span>Timestamp ${timestamp.getTime()}ms</span>`;
 }
 
 render(html`<${App} />`, document.getElementById("main"));
