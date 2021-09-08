@@ -1,5 +1,7 @@
 # Async Channels
 
+[![Test](https://github.com/Eyal-Shalev/async-channels/actions/workflows/test.yml/badge.svg)](https://github.com/Eyal-Shalev/async-channels/actions/workflows/test.yml)
+
 Inspired by `Go` & `Clojure` Channels, `async-channels` provides channels as an
 asynchronous communication method between asynchronous functions.
 

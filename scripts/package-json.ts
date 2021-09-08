@@ -36,6 +36,12 @@ const data = {
   engines: {
     node: ">=14",
   },
+  exports: {
+    ".": {
+      require: "./dist/cjs.bundle.js",
+      import: "./dist/es.bundle.js",
+    },
+  },
 };
 
 await Deno.writeTextFile(

@@ -137,13 +137,16 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
   }
 
   public async send(val: T, abortCtrl?: AbortController): Promise<void> {
-    this.debug(`send(${val})`);
+    this.debug("send(val)", { val });
     const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
 
     if ([SendStuck, WaitingForAck].includes(this.current)) {
       await (abortPromise
-        ? Promise.race([this.waitForState(Idle)])
+        ? Promise.race([this.waitForState(Idle), abortPromise])
         : this.waitForState(Idle));
+
+      if (abortCtrl?.signal.aborted) throw new AbortedError("send");
+      if (this.current !== Idle) return this.send(val);
     }
 
     if (abortCtrl?.signal.aborted) throw new AbortedError("send");
