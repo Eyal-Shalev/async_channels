@@ -1,9 +1,5 @@
 import { _format, AssertionError } from "deno/testing/asserts.ts";
-export const sleep = (duration: number) => {
-  return new Promise<void>((res) => {
-    setTimeout(() => res(), duration);
-  });
-};
+export { sleep } from "./utils.ts";
 
 export function assertNumberBetween(
   actual: number,

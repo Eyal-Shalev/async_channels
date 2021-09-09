@@ -8,6 +8,7 @@ import {
   Transition,
   WaitingForAck,
 } from "./internal/state-machine.ts";
+import { sleep } from "./internal/utils.ts";
 
 const eventType = (x: Transition | State): string => {
   return typeof x === "string" ? `Transition::${x}` : `State::${x.name}`;
@@ -46,13 +47,18 @@ export interface Sender<T> {
 
 export interface Receiver<T> extends AsyncIterable<T> {
   receive(abortCtrl?: AbortController): Promise<[T, true] | [undefined, false]>;
+  map<TOut>(fn: (val: T) => TOut): Receiver<TOut>;
+  forEach(fn: (val: T) => void): Receiver<void>;
+  filter(fn: (val: T) => boolean): Receiver<T>;
+  reduce(fn: (prev: T, current: T) => T): Receiver<T>;
 }
 
 export type SendCloser<T> = Sender<T> & Closer;
 export type ReceiveClose<T> = Receiver<T> & Closer;
 export type SendReceiver<T> = Sender<T> & Receiver<T>;
 
-export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
+export class Channel<T>
+  implements Sender<T>, Receiver<T>, Closer, AsyncIterable<T> {
   protected currentVal?: T;
   protected current: State = Idle;
   protected transitionEventTarget = new EventTarget();
@@ -65,7 +71,6 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
   ) {
     this.queue = new Queue<T>(bufferSize);
     if (options?.debug) {
-      console.log(); // Don't ask...
       const reporter = (ev: Event) => {
         this.debug(ev.type, { val: (ev as ValEvent<T>).val });
       };
@@ -77,6 +82,55 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
         this.stateEventTarget.addEventListener(eventType(state), reporter);
       });
     }
+  }
+  map<TOut>(fn: (val: T) => TOut): Receiver<TOut> {
+    const outChan = new Channel<TOut>();
+    (async () => {
+      for await (const current of this) {
+        await outChan.send(fn(current));
+      }
+    })().catch((err) => this.error("map", fn, err))
+      .finally(() => outChan.close());
+    return outChan;
+  }
+  forEach(fn: (val: T) => void): Receiver<void> {
+    const outChan = new Channel<void>();
+    (async () => {
+      for await (const current of this) {
+        fn(current);
+      }
+    })().catch((err) => this.error("map", fn, err))
+      .finally(() => outChan.close());
+    return outChan;
+  }
+  filter(fn: (val: T) => boolean): Receiver<T> {
+    const outChan = new Channel<T>();
+    (async () => {
+      for await (const current of this) {
+        if (!fn(current)) continue;
+        await outChan.send(current);
+      }
+    })().catch((err) => this.error("map", fn, err))
+      .finally(() => outChan.close());
+    return outChan;
+  }
+  reduce(fn: (prev: T, current: T) => T): Receiver<T> {
+    const outChan = new Channel<T>();
+
+    (async () => {
+      const res = await this.receive();
+      if (!res[1]) return;
+
+      let prev = res[0];
+      for await (const current of this) {
+        prev = fn(prev, current);
+      }
+
+      await outChan.send(prev);
+    })().catch((err) => this.error("reduce", fn, err))
+      .finally(() => outChan.close());
+
+    return outChan;
   }
 
   public close() {
@@ -98,7 +152,10 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
         : this.waitForState(Idle, Closed));
     }
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("receive");
+    if (abortCtrl?.signal.aborted) {
+      this.debug("receive() aborted");
+      throw new AbortedError("receive");
+    }
 
     if ([Idle, Closed].includes(this.current) && !this.queue.isEmpty) {
       abortCtrl?.abort();
@@ -119,7 +176,10 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
         ? Promise.race([waitForAckPromise, abortPromise])
         : waitForAckPromise);
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("receive");
+    if (abortCtrl?.signal.aborted) {
+      this.debug("receive() aborted");
+      throw new AbortedError("receive");
+    }
 
     if (this.current === Closed) {
       abortCtrl?.abort();
@@ -145,11 +205,17 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
         ? Promise.race([this.waitForState(Idle), abortPromise])
         : this.waitForState(Idle));
 
-      if (abortCtrl?.signal.aborted) throw new AbortedError("send");
+      if (abortCtrl?.signal.aborted) {
+        this.debug("send(val) aborted", { val });
+        throw new AbortedError("send");
+      }
       if (this.current !== Idle) return this.send(val);
     }
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("send");
+    if (abortCtrl?.signal.aborted) {
+      this.debug("send(val) aborted", { val });
+      throw new AbortedError("send");
+    }
 
     if (this.current === Idle && !this.queue.isFull) {
       abortCtrl?.abort();
@@ -173,7 +239,10 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
       ? Promise.race([receiveStuckPromise, abortPromise])
       : receiveStuckPromise);
 
-    if (abortCtrl?.signal.aborted) throw new AbortedError("send");
+    if (abortCtrl?.signal.aborted) {
+      this.debug("send(val) aborted", { val });
+      throw new AbortedError("send");
+    }
     abortCtrl?.abort();
 
     if (this.current === ReceiveStuck) {
@@ -231,6 +300,14 @@ export class Channel<T> implements Sender<T>, Receiver<T>, Closer {
     });
   }
 
+  protected error(...args: unknown[]) {
+    console.error(...args, {
+      currentState: this.current.name,
+      currentVal: this.currentVal,
+      ...(this.options?.debugExtra || {}),
+    });
+  }
+
   protected debug(...args: unknown[]) {
     if (this.options?.debug) {
       console.debug(...args, {
@@ -261,24 +338,33 @@ export interface SelectOptions<T> {
   default: T;
 }
 
+export function isReceiver(x: unknown): x is Receiver<unknown> {
+  return x instanceof Object && "receive" in x &&
+    typeof x["receive"] === "function";
+}
+
+export function isSender(x: unknown): x is Sender<unknown> {
+  return x instanceof Object && "send" in x &&
+    typeof x["send"] === "function";
+}
+
 export async function select<T>(
-  items: (Channel<T> | [Channel<T>, T])[],
+  items: (Receiver<T> | [Sender<T>, T])[],
   options?: SelectOptions<T> | Exclude<SelectOptions<T>, "default">,
-): Promise<[T, Channel<T>] | [true, Channel<T>] | [unknown, undefined]> {
+): Promise<[T, Receiver<T>] | [true, Sender<T>] | [unknown, undefined]> {
   const abortCtrl = new AbortController();
   const selectPromises: Promise<void | T | undefined>[] = items.map((item) => {
-    if (item instanceof Channel) {
+    if (isReceiver(item)) {
       return item.receive(abortCtrl).then(([val]) => val);
     }
     return item[0].send(item[1], abortCtrl);
   });
 
-  let defaultPromise = Promise.reject<T>();
   if (options && "default" in options) {
-    defaultPromise = Promise.resolve<T>(options.default);
+    sleep(0).then(() => abortCtrl.abort());
   }
 
-  const results = await Promise.allSettled([...selectPromises, defaultPromise]);
+  const results = await Promise.allSettled([...selectPromises]);
 
   for (let i = 0; i < results.length; i++) {
     const item = items[i];
@@ -292,9 +378,54 @@ export async function select<T>(
     if (Array.isArray(item)) {
       return [true, item[0]];
     }
+  }
 
-    return [result.value, undefined];
+  if (options && "default" in options) {
+    return [options.default, undefined];
   }
 
   throw new Error("Unreachable");
+}
+
+export function merge(): never;
+export function merge(inChans: Receiver<unknown>): never;
+export function merge<T1, T2>(
+  inChan1: Receiver<T1>,
+  inChan2: Receiver<T2>,
+): Receiver<T1 | T2>;
+export function merge<T1, T2, T3>(
+  inChan1: Receiver<T1>,
+  inChan2: Receiver<T2>,
+  inChan3: Receiver<T3>,
+): Receiver<T1 | T2 | T3>;
+export function merge<T1, T2, T3, T4>(
+  inChan1: Receiver<T1>,
+  inChan2: Receiver<T2>,
+  inChan3: Receiver<T3>,
+  inChan4: Receiver<T4>,
+): Receiver<T1 | T2 | T3 | T4>;
+export function merge<T1, T2, T3, T4, T5>(
+  inChan1: Receiver<T1>,
+  inChan2: Receiver<T2>,
+  inChan3: Receiver<T3>,
+  inChan4: Receiver<T4>,
+  inChan5: Receiver<T5>,
+): Receiver<T1 | T2 | T3 | T4 | T5>;
+export function merge<T>(...inChans: Receiver<T>[]): Receiver<T>;
+export function merge<T>(...inChans: Receiver<T>[]): Receiver<T> {
+  if (inChans.length < 2) {
+    throw new TypeError("cannot merge less than 2 channels");
+  }
+  const outChan = new Channel<T>();
+
+  Promise.all(inChans.map((inChan) =>
+    (async () => {
+      for await (const current of inChan) {
+        await outChan.send(current);
+      }
+    })()
+  )).catch((err) => console.error("merge", err))
+    .finally(() => outChan.close());
+
+  return outChan;
 }

@@ -1,5 +1,5 @@
 import { sleep } from "./internal/test_utils.ts";
-import { Channel, select } from "./channel.ts";
+import { Channel, merge, select } from "./channel.ts";
 import { InvalidTransitionError } from "./internal/state-machine.ts";
 import { assertEquals, assertThrowsAsync, fail } from "deno/testing/asserts.ts";
 
@@ -149,6 +149,24 @@ Deno.test("select send when 1 has buffer", async () => {
   assertEquals(selectedChannel, c2);
 });
 
+Deno.test("select return default", async () => {
+  const c1 = new Channel<string>(0);
+  const c2 = new Channel<string>(0);
+
+  for (const expected of [undefined, null, true, false, 0, ""]) {
+    const [val, selectedChannel] = await select(
+      [[c1, "c1"], c2],
+      { default: expected },
+    );
+    assertEquals(val, expected);
+    assertEquals(selectedChannel, undefined);
+  }
+
+  c1.close();
+  c2.close();
+  await sleep(100);
+});
+
 Deno.test("channel as an async iterator", async () => {
   const chan = new Channel<string>(1);
 
@@ -169,4 +187,64 @@ Deno.test("channel as an async iterator", async () => {
   await p;
 
   assertEquals(out, ["a", "boo", "b"]);
+});
+
+Deno.test("map", async () => {
+  const ch = new Channel<number>(1);
+  const doubleCh = ch.map((x) => x * 2);
+
+  const p = Promise.all([
+    ch.send(1),
+    ch.send(2),
+    ch.send(3),
+  ]).then(() => ch.close());
+
+  const expected = [2, 4, 6];
+  for await (const x of doubleCh) {
+    assertEquals(x, expected.shift());
+  }
+
+  await p;
+  assertEquals(expected.length, 0, "expected stack isn't empty");
+});
+
+Deno.test("merge", async () => {
+  const ch1 = new Channel<string>();
+  const ch2 = new Channel<number>();
+  const mergedChan = merge(ch1, ch2);
+
+  const p = Promise.all([
+    ch1.send("Hello"),
+    ch2.send(2),
+    ch1.send("world"),
+  ]).then(() => {
+    ch1.close();
+    ch2.close();
+  });
+
+  const expected = ["Hello", 2, "world"];
+  for await (const msg of mergedChan) {
+    assertEquals(msg, expected.shift());
+  }
+
+  await p;
+  assertEquals(expected.length, 0, "expected stack isn't empty");
+});
+
+Deno.test("pipeline", async () => {
+  const ch = new Channel<number>(0);
+
+  const pipeCh = ch
+    .filter((x) => x % 2 !== 0)
+    .map((x) => x * 2)
+    .reduce((prev, cur) => prev + cur);
+
+  const p = Promise.all(
+    [1, 2, 3, 4, 5, 6].map((x) => ch.send(x)),
+  ).then(() => ch.close());
+
+  assertEquals(await pipeCh.receive(), [18, true]);
+  assertEquals(await pipeCh.receive(), [undefined, false]);
+
+  await p;
 });
