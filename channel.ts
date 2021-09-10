@@ -32,19 +32,42 @@ class StateEvent<T> extends ValEvent<T> {
   }
 }
 
+/**
+ * Extra options for new channels.
+ */
 export interface ChannelOptions {
+  /**
+   * @type {boolean}
+   * When true, debugging messages will be printed (using `console.debug`) in the lifecycle of the channel.
+   */
   debug?: boolean;
+
+  /**
+   * @type {Record<string, unknown>}
+   * When `debug` is `true`, this struct will be added to the debug messages.
+   */
   debugExtra?: Record<string, unknown>;
 }
 
 export interface Closer {
+  /**
+   * Closes the resource.
+   *
+   * Closing a closed resource have no effect (positive or negative).
+   */
   close(): void;
 }
 
+/**
+ * @template T The type of value that can be sent.
+ */
 export interface Sender<T> {
   send(val: T, abortCtrl?: AbortController): Promise<void>;
 }
 
+/**
+ * @template T The type of value that can be received.
+ */
 export interface Receiver<T> extends AsyncIterable<T> {
   receive(abortCtrl?: AbortController): Promise<[T, true] | [undefined, false]>;
   map<TOut>(fn: (val: T) => TOut): Receiver<TOut>;
@@ -57,6 +80,9 @@ export type SendCloser<T> = Sender<T> & Closer;
 export type ReceiveClose<T> = Receiver<T> & Closer;
 export type SendReceiver<T> = Sender<T> & Receiver<T>;
 
+/**
+ * @template T The type of value held by this channel.
+ */
 export class Channel<T>
   implements Sender<T>, Receiver<T>, Closer, AsyncIterable<T> {
   protected currentVal?: T;
@@ -65,10 +91,20 @@ export class Channel<T>
   protected stateEventTarget = new EventTarget();
   protected readonly queue: Queue<T>;
 
+  /**
+   * Constructs a new Channel with an optional buffer.
+   *
+   * @param {number} [bufferSize=0] A safe and positive integer representing the channel buffer size.
+   *   A `bufferSize` of `0` indicates a channel without any buffer.
+   * @param {ChannelOptions} [options]
+   */
   constructor(
     bufferSize = 0,
     protected readonly options?: ChannelOptions,
   ) {
+    if (!Number.isSafeInteger(bufferSize) || bufferSize < 0) {
+      throw new TypeError("bufferSize must be a safe positive integer.");
+    }
     this.queue = new Queue<T>(bufferSize);
     if (options?.debug) {
       const reporter = (ev: Event) => {
@@ -83,60 +119,69 @@ export class Channel<T>
       });
     }
   }
-  map<TOut>(fn: (val: T) => TOut): Receiver<TOut> {
-    const outChan = new Channel<TOut>();
-    (async () => {
-      for await (const current of this) {
-        await outChan.send(fn(current));
-      }
-    })().catch((err) => this.error("map", fn, err))
-      .finally(() => outChan.close());
-    return outChan;
-  }
-  forEach(fn: (val: T) => void): Receiver<void> {
-    const outChan = new Channel<void>();
-    (async () => {
-      for await (const current of this) {
-        fn(current);
-      }
-    })().catch((err) => this.error("map", fn, err))
-      .finally(() => outChan.close());
-    return outChan;
-  }
-  filter(fn: (val: T) => boolean): Receiver<T> {
-    const outChan = new Channel<T>();
-    (async () => {
-      for await (const current of this) {
-        if (!fn(current)) continue;
-        await outChan.send(current);
-      }
-    })().catch((err) => this.error("map", fn, err))
-      .finally(() => outChan.close());
-    return outChan;
-  }
-  reduce(fn: (prev: T, current: T) => T): Receiver<T> {
-    const outChan = new Channel<T>();
 
-    (async () => {
-      const res = await this.receive();
-      if (!res[1]) return;
-
-      let prev = res[0];
-      for await (const current of this) {
-        prev = fn(prev, current);
-      }
-
-      await outChan.send(prev);
-    })().catch((err) => this.error("reduce", fn, err))
-      .finally(() => outChan.close());
-
-    return outChan;
-  }
-
+  /**
+   * Closes the channel.
+   *
+   * Closing a closed channel have no effect (positive or negative).
+   *
+   * Sending a message to a closed channel will throw an `AbortedError`.
+   *
+   * Receiving a message from a closed channel will resolve the promise immediately.
+   * See `Channel.receive` for more information.
+   */
   public close() {
     this.updateState(Transition.CLOSE);
   }
 
+  /**
+   * Receive returns a promise that will be resolved with `[T, true]` when a value is available (or rejected if a provided `AbortController` is aborted).
+   *
+   * If the channel is closed, then the promise will be resolved immediately with `[undefined, false]`.
+   *
+   * Receiving from a closed channel:
+   * ```ts
+   *   import {Channel} from "./channel.ts";
+   *   const ch = new Channel();
+   *   ch.close();
+   *   const [val, ok] = await ch.receive()
+   *   console.assert(val === undefined)
+   *   console.assert(ok === false)
+   * ```
+   *
+   * Receiving from a buffered channel:
+   * ```ts
+   *   import {Channel} from "./channel.ts";
+   *   const ch = new Channel(1);
+   *   await ch.send("Hello world!")
+   *   ch.close();
+   *   const [val, ok] = await ch.receive()
+   *   console.assert(val === "Hello world!")
+   *   console.assert(ok === true)
+   * ```
+   *
+   * Aborting a receive request:
+   * ```ts
+   *   import {Channel, AbortedError} from "./channel.ts";
+   *   const ch = new Channel(1);
+   *   await ch.send("Hello world!")
+   *   ch.close();
+   *   const abortCtrl = new AbortController()
+   *   abortCtrl.abort()
+   *   try {
+   *     await ch.receive(abortCtrl);
+   *     console.assert(false, "unreachable");
+   *   } catch (e) {
+   *     console.assert(e instanceof AbortedError);
+   *   }
+   * ```
+   *
+   * @param {AbortController} [abortCtrl]
+   *   When provided `receive` will `abort` the controller when a value is available.
+   *   But if the controller is aborted before that, the promise returned by `receive` will be rejected.
+   * @returns {Promise<[T, true] | [undefined, false]>}
+   *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
+   */
   public async receive(
     abortCtrl?: AbortController,
   ): Promise<[T, true] | [undefined, false]> {
@@ -196,6 +241,17 @@ export class Channel<T>
     return [valToReturn, true];
   }
 
+  /**
+   * Sends a messages to the channel.
+   *
+   * @param {T} val
+   *   The value to pass to the channel.
+   * @param {AbortController} [abortCtrl]
+   *   When provided `send` will `abort` the controller after `val` is successfuly received.
+   *   But if the controller is aborted before that, the promise returned by `send` will be rejected.
+   * @returns {Promise<void>}
+   *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
+   */
   public async send(val: T, abortCtrl?: AbortController): Promise<void> {
     this.debug("send(val)", { val });
     const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
@@ -258,6 +314,59 @@ export class Channel<T>
       if (!res[1]) return;
       yield res[0];
     }
+  }
+
+  map<TOut>(fn: (val: T) => TOut): Receiver<TOut> {
+    const outChan = new Channel<TOut>();
+    (async () => {
+      for await (const current of this) {
+        await outChan.send(fn(current));
+      }
+    })().catch((err) => this.error("map", fn, err))
+      .finally(() => outChan.close());
+    return outChan;
+  }
+
+  forEach(fn: (val: T) => void): Receiver<void> {
+    const outChan = new Channel<void>();
+    (async () => {
+      for await (const current of this) {
+        fn(current);
+      }
+    })().catch((err) => this.error("map", fn, err))
+      .finally(() => outChan.close());
+    return outChan;
+  }
+
+  filter(fn: (val: T) => boolean): Receiver<T> {
+    const outChan = new Channel<T>();
+    (async () => {
+      for await (const current of this) {
+        if (!fn(current)) continue;
+        await outChan.send(current);
+      }
+    })().catch((err) => this.error("map", fn, err))
+      .finally(() => outChan.close());
+    return outChan;
+  }
+
+  reduce(fn: (prev: T, current: T) => T): Receiver<T> {
+    const outChan = new Channel<T>();
+
+    (async () => {
+      const res = await this.receive();
+      if (!res[1]) return;
+
+      let prev = res[0];
+      for await (const current of this) {
+        prev = fn(prev, current);
+      }
+
+      await outChan.send(prev);
+    })().catch((err) => this.error("reduce", fn, err))
+      .finally(() => outChan.close());
+
+    return outChan;
   }
 
   /**
