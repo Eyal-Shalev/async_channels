@@ -1,4 +1,4 @@
-import { Channel } from "@eyal-shalev/async-channels";
+import { Channel } from "@eyal-shalev/async_channels";
 
 const ch = new Channel(0);
 

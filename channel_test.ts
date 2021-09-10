@@ -1,4 +1,4 @@
-import { sleep } from "./internal/test_utils.ts";
+import { sleep } from "./internal/utils.ts";
 import { Channel, merge, select } from "./channel.ts";
 import { InvalidTransitionError } from "./internal/state-machine.ts";
 import { assertEquals, assertThrowsAsync, fail } from "deno/testing/asserts.ts";
