@@ -84,7 +84,7 @@ export class Channel<T>
     }
   }
   map<TOut>(fn: (val: T) => TOut): Receiver<TOut> {
-    const outChan = new Channel<TOut>();
+    const outChan = new Channel<TOut>(this.queue.capacity);
     (async () => {
       for await (const current of this) {
         await outChan.send(fn(current));
@@ -94,7 +94,7 @@ export class Channel<T>
     return outChan;
   }
   forEach(fn: (val: T) => void): Receiver<void> {
-    const outChan = new Channel<void>();
+    const outChan = new Channel<void>(this.queue.capacity);
     (async () => {
       for await (const current of this) {
         fn(current);
@@ -104,7 +104,7 @@ export class Channel<T>
     return outChan;
   }
   filter(fn: (val: T) => boolean): Receiver<T> {
-    const outChan = new Channel<T>();
+    const outChan = new Channel<T>(this.queue.capacity);
     (async () => {
       for await (const current of this) {
         if (!fn(current)) continue;
@@ -115,7 +115,7 @@ export class Channel<T>
     return outChan;
   }
   reduce(fn: (prev: T, current: T) => T): Receiver<T> {
-    const outChan = new Channel<T>();
+    const outChan = new Channel<T>(this.queue.capacity);
 
     (async () => {
       const res = await this.receive();

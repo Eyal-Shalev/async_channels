@@ -1,18 +1,21 @@
 import {
+  createContext,
   h,
   render,
 } from "https://cdn.skypack.dev/pin/preact@v10.5.14-NU6DIzRE0F11UYcL6Ija/mode=imports,min/optimized/preact.js";
 import {
+  useContext,
   useEffect,
   useState,
 } from "https://cdn.skypack.dev/pin/preact@v10.5.14-NU6DIzRE0F11UYcL6Ija/mode=imports,min/optimized/preact/hooks.js";
 import htm from "https://cdn.skypack.dev/pin/htm@v3.1.0-Lnrl6ooU0xR8YCDnwwW6/mode=imports,min/optimized/htm.js";
-import { Channel } from "https://cdn.skypack.dev/pin/@eyalsh/async-channels@v1.0.0-alpha22-7tfiZXXZ9b16gbM3Whe9/mode=imports/optimized/@eyalsh/async-channels.js";
+import { Channel } from "https://cdn.skypack.dev/@eyalsh/async-channels";
 
 // Initialize htm with Preact
 const html = htm.bind(h);
 
-function Todo({ item: { label, done }, ch }) {
+function Todo({ item: { label, done } }) {
+  const ch = useContext(UpdateChan);
   const [enabled, setEnabled] = useState(true);
   const toggle = (ev) => {
     ev.preventDefault();
@@ -34,13 +37,14 @@ function Todo({ item: { label, done }, ch }) {
   </div>`;
 }
 
-function Todos({ items, ch }) {
+function Todos({ items }) {
   return html`<div class="list-group">
-    ${items.map((item) => html`<${Todo} item=${item} ch=${ch} />`)}
+    ${items.map((item) => html`<${Todo} item=${item}/>`)}
   </div>`;
 }
 
-function AddTodoForm({ ch }) {
+function AddTodoForm() {
+  const ch = useContext(UpdateChan);
   const [enabled, setEnabled] = useState(true);
   const [label, setLabel] = useState("");
 
@@ -71,10 +75,10 @@ const sleep = (duration) => {
     setTimeout(() => res(), duration);
   });
 };
+const UpdateChan = createContext(new Channel(0));
 
-const ch = new Channel(0, { debug: true });
-
-function App() {
+function TodoContainer() {
+  const ch = useContext(UpdateChan);
   const [todos, updateTodos] = useState([]);
   useEffect(() => {
     const ctrl = new AbortController();
@@ -102,10 +106,20 @@ function App() {
     return () => ctrl.abort();
   }, [todos]);
 
-  return html`<div class="container">
-    <${Todos} items=${todos} ch=${ch} />
-    <${AddTodoForm} ch=${ch} />
+  return html`<div>
+    <${Todos} items=${todos} />
+    <${AddTodoForm} />
+  </div>`;
+}
+
+function App() {
+  return html
+    `<div class="container"><${UpdateChan.Provider} value="${new Channel(
+      0,
+    )}">
+    <${TodoContainer} />
     <footer><${Clock} /></footer>
+    </${UpdateChan.Provider}>
   </div>`;
 }
 
