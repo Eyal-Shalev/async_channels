@@ -8,7 +8,14 @@ import {
   Sender,
 } from "./channel.ts";
 
-export class Broadcaster<TMsg, TTopic> implements Sender<TMsg>, Closer {
+type Foo<TMsg, TTopic> = Omit<Broadcaster<TMsg, TTopic>, "send">;
+
+export interface Subscribable<TMsg, TTopic> {
+  subscribe(topic: TTopic): Receiver<TMsg>;
+}
+
+export class Broadcaster<TMsg, TTopic>
+  implements Sender<TMsg>, Closer, Subscribable<TMsg, TTopic> {
   protected subscribers = new Map<TTopic, Set<SendCloser<TMsg>>>();
 
   #isOpen = true;
@@ -20,6 +27,23 @@ export class Broadcaster<TMsg, TTopic> implements Sender<TMsg>, Closer {
     protected readonly topicFn: (val: TMsg) => TTopic,
     protected readonly options?: ChannelOptions,
   ) {}
+
+  static from<TMsg, TTopic>(
+    input: AsyncIterable<TMsg> | Iterable<TMsg>,
+    topicFn: (val: TMsg) => TTopic,
+    options?: ChannelOptions,
+  ): Subscribable<TMsg, TTopic> {
+    const bcast = new Broadcaster<TMsg, TTopic>(topicFn, options);
+
+    (async () => {
+      for await (const msg of input) {
+        await bcast.send(msg);
+      }
+      bcast.close();
+    })();
+
+    return bcast;
+  }
 
   async send(msg: TMsg): Promise<void> {
     const targets = this.subscribers.get(this.topicFn(msg));
