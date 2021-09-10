@@ -19,7 +19,7 @@ const data = {
   name: `@${scope.toLowerCase()}/${name.toLowerCase()}`,
   version,
   description:
-    "Inspired by Go & Clojure Channels, async-channels provides channels as an asynchronous communication method between asynchronous functions.",
+    "Inspired by Go & Clojure Channels, async_channels provides channels as an asynchronous communication method between asynchronous functions.",
   keywords: ["async", "channel", "channels", "await"],
   homepage: `https://github.com/Eyal-Shalev/${name}`,
   bugs: {

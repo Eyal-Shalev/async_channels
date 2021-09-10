@@ -5,9 +5,6 @@ on:
     tags:
       - v*
 
-env:
-  camelCaseName: asyncChannels
-
 jobs:
   bundle:
     runs-on: ubuntu-latest
@@ -60,6 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: bundle
     env:
+      BUNDLE_NAME: async_channels
       FORMATS: |
         es
         amd
@@ -84,8 +82,8 @@ jobs:
 
       - name: Create Bundles
         run: |
-          for f in $FORMATS; do rollup dist/bundle.js --file dist/"$f".bundle.js --format "$f" --name "$camelCaseName"; done
-          for f in $FORMATS; do rollup dist/bundle.js --file dist/"$f".bundle.min.js --format "$f" --name "$camelCaseName" --plugin terser; done
+          for f in $FORMATS; do rollup dist/bundle.js --file dist/"$f".bundle.js --format "$f" --name "$BUNDLE_NAME"; done
+          for f in $FORMATS; do rollup dist/bundle.js --file dist/"$f".bundle.min.js --format "$f" --name "$BUNDLE_NAME" --plugin terser; done
 
       - uses: actions/upload-artifact@v2
         with:
