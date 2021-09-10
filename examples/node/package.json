@@ -10,6 +10,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@eyalsh/async-channels": "*"
+    "@eyalsh/async_channels": "*"
   }
 }

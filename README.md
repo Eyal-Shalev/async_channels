@@ -1,14 +1,14 @@
 # Async Channels
 
-[![Test](https://github.com/Eyal-Shalev/async-channels/actions/workflows/test.yml/badge.svg)](https://github.com/Eyal-Shalev/async-channels/actions/workflows/test.yml)
+[![Test](https://github.com/Eyal-Shalev/async_channels/actions/workflows/test.yml/badge.svg)](https://github.com/Eyal-Shalev/async_channels/actions/workflows/test.yml)
 
-Inspired by `Go` & `Clojure` Channels, `async-channels` provides channels as an
+Inspired by `Go` & `Clojure` Channels, `async_channels` provides channels as an
 asynchronous communication method between asynchronous functions.
 
 ## Example
 
 ```typescript
-import { Channel } from "https://deno.land/x/async-channels/mod.ts";
+import { Channel } from "https://deno.land/x/async_channels/mod.ts";
 
 const sleep = (duration: number) =>
   new Promise<void>((res) => {
