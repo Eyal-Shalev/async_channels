@@ -10,6 +10,8 @@ import {
 } from "./internal/state-machine.ts";
 import { sleep } from "./internal/utils.ts";
 
+export { InvalidTransitionError } from "./internal/state-machine.ts";
+
 const eventType = (x: Transition | State): string => {
   return typeof x === "string" ? `Transition::${x}` : `State::${x.name}`;
 };
@@ -51,76 +53,6 @@ export interface ChannelOptions {
 
 export interface Closer {
   /**
-   * Closes the resource.
-   *
-   * Closing a closed resource have no effect (positive or negative).
-   */
-  close(): void;
-}
-
-/**
- * @template T The type of value that can be sent.
- */
-export interface Sender<T> {
-  send(val: T, abortCtrl?: AbortController): Promise<void>;
-}
-
-/**
- * @template T The type of value that can be received.
- */
-export interface Receiver<T> extends AsyncIterable<T> {
-  receive(abortCtrl?: AbortController): Promise<[T, true] | [undefined, false]>;
-  map<TOut>(fn: (val: T) => TOut): Receiver<TOut>;
-  forEach(fn: (val: T) => void): Receiver<void>;
-  filter(fn: (val: T) => boolean): Receiver<T>;
-  reduce(fn: (prev: T, current: T) => T): Receiver<T>;
-}
-
-export type SendCloser<T> = Sender<T> & Closer;
-export type ReceiveClose<T> = Receiver<T> & Closer;
-export type SendReceiver<T> = Sender<T> & Receiver<T>;
-
-/**
- * @template T The type of value held by this channel.
- */
-export class Channel<T>
-  implements Sender<T>, Receiver<T>, Closer, AsyncIterable<T> {
-  protected currentVal?: T;
-  protected current: State = Idle;
-  protected transitionEventTarget = new EventTarget();
-  protected stateEventTarget = new EventTarget();
-  protected readonly queue: Queue<T>;
-
-  /**
-   * Constructs a new Channel with an optional buffer.
-   *
-   * @param {number} [bufferSize=0] A safe and positive integer representing the channel buffer size.
-   *   A `bufferSize` of `0` indicates a channel without any buffer.
-   * @param {ChannelOptions} [options]
-   */
-  constructor(
-    bufferSize = 0,
-    protected readonly options?: ChannelOptions,
-  ) {
-    if (!Number.isSafeInteger(bufferSize) || bufferSize < 0) {
-      throw new TypeError("bufferSize must be a safe positive integer.");
-    }
-    this.queue = new Queue<T>(bufferSize);
-    if (options?.debug) {
-      const reporter = (ev: Event) => {
-        this.debug(ev.type, { val: (ev as ValEvent<T>).val });
-      };
-      Object.values(Transition).forEach((t) => {
-        this.transitionEventTarget.addEventListener(eventType(t), reporter);
-      });
-
-      [Idle, ReceiveStuck, SendStuck, WaitingForAck].forEach((state) => {
-        this.stateEventTarget.addEventListener(eventType(state), reporter);
-      });
-    }
-  }
-
-  /**
    * Closes the channel.
    *
    * Closing a closed channel have no effect (positive or negative).
@@ -130,12 +62,50 @@ export class Channel<T>
    * Receiving a message from a closed channel will resolve the promise immediately.
    * See `Channel.receive` for more information.
    */
-  public close() {
-    this.updateState(Transition.CLOSE);
-  }
+  close(): void;
+}
 
+/**
+ * @template T The type of value that can be sent.
+ */
+export interface Sender<T> {
   /**
-   * Receive returns a promise that will be resolved with `[T, true]` when a value is available (or rejected if a provided `AbortController` is aborted).
+   * Sends a value on the channel, and returns a promise that will be resolved when a the value is received (see
+   * `Channel.receive`), or rejected if a provided `AbortController` is aborted.
+   *
+   * If the channel is closed, then the promise will be rejected with an `InvalidTransitionError`.
+   *
+   * ```ts
+   * import {Channel, InvalidTransitionError} from "./channel.ts"
+   *
+   * const ch = new Channel()
+   * ch.close();
+   * try {
+   *   await ch.send("should fail")
+   *   console.assert(false, "unreachable")
+   * } catch (e) {
+   *   console.assert(e instanceof InvalidTransitionError)
+   * }
+   * ```
+   *
+   * @param {T} val
+   *   The value to pass to the channel.
+   * @param {AbortController} [abortCtrl]
+   *   When provided `send` will `abort` the controller after `val` is successfully received.
+   *   But if the controller is aborted before that, the promise returned by `send` will be rejected.
+   * @returns {Promise<void>}
+   *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
+   */
+  send(val: T, abortCtrl?: AbortController): Promise<void>;
+}
+
+/**
+ * @template T The type of value that can be received.
+ */
+export interface Receiver<T> extends AsyncIterable<T> {
+  /**
+   * Receive returns a promise that will be resolved with `[T, true]` when a value is available, or rejected if a
+   * provided `AbortController` is aborted
    *
    * If the channel is closed, then the promise will be resolved immediately with `[undefined, false]`.
    *
@@ -182,6 +152,88 @@ export class Channel<T>
    * @returns {Promise<[T, true] | [undefined, false]>}
    *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
    */
+  receive(abortCtrl?: AbortController): Promise<[T, true] | [undefined, false]>;
+
+  /**
+   * Creates an `AsyncGenerator` that yields all values sent to this channel,
+   * and returns when the channel closes.
+   */
+  [Symbol.asyncIterator](): AsyncGenerator<T, void, void>;
+
+  /**
+   * map returns a receiver channel that contains the results of applying `fn`
+   * to each value of `this` channel.
+   *
+   * The receiver channel will close, when the original channel closes.
+   *
+   * @template TOut
+   * @param {(val: T) => TOut} fn
+   * @return {Receiver<TOut>}
+   */
+  map<TOut>(fn: (val: T) => TOut | Promise<TOut>): Receiver<TOut>;
+
+  /**
+   * forEach applies `fn` to each value in `this` channel, and returns a channel
+   * that will close after `this` channel closes.
+   *
+   * @param {(val: T) => void} fn
+   * @return {Receiver<void>}
+   */
+  forEach(fn: (val: T) => void | Promise<void>): Receiver<void>;
+
+  filter(fn: (val: T) => boolean | Promise<boolean>): Receiver<T>;
+
+  reduce(fn: (prev: T, current: T) => T | Promise<T>): Receiver<T>;
+}
+
+export type SendCloser<T> = Sender<T> & Closer;
+export type ReceiveClose<T> = Receiver<T> & Closer;
+export type SendReceiver<T> = Sender<T> & Receiver<T>;
+
+/**
+ * @template T The type of value held by this channel.
+ */
+export class Channel<T>
+  implements Sender<T>, Receiver<T>, Closer, AsyncIterable<T> {
+  protected currentVal?: T;
+  protected current: State = Idle;
+  protected transitionEventTarget = new EventTarget();
+  protected stateEventTarget = new EventTarget();
+  protected readonly queue: Queue<T>;
+
+  /**
+   * Constructs a new Channel with an optional buffer.
+   *
+   * @param {number} [bufferSize=0] A safe and positive integer representing the channel buffer size.
+   *   A `bufferSize` of `0` indicates a channel without any buffer.
+   * @param {ChannelOptions} [options]
+   */
+  constructor(
+    bufferSize = 0,
+    protected readonly options?: ChannelOptions,
+  ) {
+    if (!Number.isSafeInteger(bufferSize) || bufferSize < 0) {
+      throw new TypeError("bufferSize must be a safe positive integer.");
+    }
+    this.queue = new Queue<T>(bufferSize);
+    if (options?.debug) {
+      const reporter = (ev: Event) => {
+        this.debug(ev.type, { val: (ev as ValEvent<T>).val });
+      };
+      Object.values(Transition).forEach((t) => {
+        this.transitionEventTarget.addEventListener(eventType(t), reporter);
+      });
+
+      [Idle, ReceiveStuck, SendStuck, WaitingForAck].forEach((state) => {
+        this.stateEventTarget.addEventListener(eventType(state), reporter);
+      });
+    }
+  }
+
+  public close() {
+    this.updateState(Transition.CLOSE);
+  }
+
   public async receive(
     abortCtrl?: AbortController,
   ): Promise<[T, true] | [undefined, false]> {
@@ -241,21 +293,12 @@ export class Channel<T>
     return [valToReturn, true];
   }
 
-  /**
-   * Sends a messages to the channel.
-   *
-   * @param {T} val
-   *   The value to pass to the channel.
-   * @param {AbortController} [abortCtrl]
-   *   When provided `send` will `abort` the controller after `val` is successfuly received.
-   *   But if the controller is aborted before that, the promise returned by `send` will be rejected.
-   * @returns {Promise<void>}
-   *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
-   */
   public async send(val: T, abortCtrl?: AbortController): Promise<void> {
     this.debug("send(val)", { val });
     const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
 
+    // If the channel state is stuck in another send, wait for the state to
+    // change into Idle and try again.
     if ([SendStuck, WaitingForAck].includes(this.current)) {
       await (abortPromise
         ? Promise.race([this.waitForState(Idle), abortPromise])
@@ -290,6 +333,7 @@ export class Channel<T>
       return;
     }
 
+    // Register to the Idle event before transitioning to guarantee order.
     const waitForIdlePromise = this.waitForState(Idle);
     await (abortPromise
       ? Promise.race([receiveStuckPromise, abortPromise])
@@ -316,33 +360,33 @@ export class Channel<T>
     }
   }
 
-  map<TOut>(fn: (val: T) => TOut): Receiver<TOut> {
+  map<TOut>(fn: (val: T) => TOut | Promise<TOut>): Receiver<TOut> {
     const outChan = new Channel<TOut>(this.queue.capacity);
     (async () => {
       for await (const current of this) {
-        await outChan.send(fn(current));
+        await outChan.send(await fn(current));
       }
     })().catch((err) => this.error("map", fn, err))
       .finally(() => outChan.close());
     return outChan;
   }
 
-  forEach(fn: (val: T) => void): Receiver<void> {
+  forEach(fn: (val: T) => void | Promise<void>): Receiver<void> {
     const outChan = new Channel<void>(this.queue.capacity);
     (async () => {
       for await (const current of this) {
-        fn(current);
+        await fn(current);
       }
     })().catch((err) => this.error("map", fn, err))
       .finally(() => outChan.close());
     return outChan;
   }
 
-  filter(fn: (val: T) => boolean): Receiver<T> {
+  filter(fn: (val: T) => boolean | Promise<boolean>): Receiver<T> {
     const outChan = new Channel<T>(this.queue.capacity);
     (async () => {
       for await (const current of this) {
-        if (!fn(current)) continue;
+        if (!(await fn(current))) continue;
         await outChan.send(current);
       }
     })().catch((err) => this.error("map", fn, err))
@@ -350,7 +394,7 @@ export class Channel<T>
     return outChan;
   }
 
-  reduce(fn: (prev: T, current: T) => T): Receiver<T> {
+  reduce(fn: (prev: T, current: T) => T | Promise<T>): Receiver<T> {
     const outChan = new Channel<T>(this.queue.capacity);
 
     (async () => {
@@ -359,7 +403,7 @@ export class Channel<T>
 
       let prev = res[0];
       for await (const current of this) {
-        prev = fn(prev, current);
+        prev = await fn(prev, current);
       }
 
       await outChan.send(prev);
@@ -392,20 +436,13 @@ export class Channel<T>
     return new Promise<T | undefined>((resolve) => {
       states.forEach((state) => {
         this.stateEventTarget.addEventListener(eventType(state), (ev) => {
+          // Resolve the promise in a scheduled-task, so the code that waits for
+          // it won't run in the current (or upcoming) micro-task.
           scheduleTask(() => {
             resolve((ev as ValEvent<T>).val);
           });
         }, { once: true });
       });
-    });
-  }
-
-  protected waitForTransition(t: Transition): Promise<T | undefined> {
-    this.debug("waitForTransition", t);
-    return new Promise<T | undefined>((resolve) => {
-      this.transitionEventTarget.addEventListener(eventType(t), (ev) => {
-        scheduleTask(() => resolve((ev as ValEvent<T>).val));
-      }, { once: true });
     });
   }
 
@@ -428,41 +465,112 @@ export class Channel<T>
   }
 }
 
+// Rename `setTimeout` to `scheduleTask` to explicitly state the usage.
 const scheduleTask = setTimeout;
 
-export function makeAbortPromise(abortCtrl: AbortController) {
+function makeAbortPromise(abortCtrl: AbortController) {
   if (abortCtrl.signal.aborted) return Promise.resolve();
   return new Promise<void>((resolve) => {
     abortCtrl.signal.addEventListener("abort", () => resolve());
   });
 }
 
+/**
+ * The `Error` class used when `receive` or `send` are aborted before
+ * completion.
+ */
 export class AbortedError extends Error {
   constructor(type: "send" | "receive") {
     super(`${type} aborted`);
   }
 }
 
-export interface SelectOptions<T> {
-  default: T;
+/**
+ * Extra options used for the `select` function.
+ */
+export interface SelectOptions<TDefault = never> {
+  default: TDefault;
 }
 
-export function isReceiver(x: unknown): x is Receiver<unknown> {
-  return x instanceof Object && "receive" in x &&
-    typeof x["receive"] === "function";
-}
+type SelectOperation<T> = Receiver<T> | [Sender<T>, T];
+type SelectDefaultResult<T> = [T, undefined];
+type SelectOperationResult<T> = [T, Receiver<T>] | [true, Sender<T>];
+type SelectResult<T, TDefault> =
+  | SelectOperationResult<T>
+  | SelectDefaultResult<TDefault>;
 
-export function isSender(x: unknown): x is Sender<unknown> {
-  return x instanceof Object && "send" in x &&
-    typeof x["send"] === "function";
-}
-
-export async function select<T>(
-  items: (Receiver<T> | [Sender<T>, T])[],
-  options?: SelectOptions<T> | Exclude<SelectOptions<T>, "default">,
-): Promise<[T, Receiver<T>] | [true, Sender<T>] | [unknown, undefined]> {
+export async function select<T, TDefault = never>(
+  ops: [],
+  options?:
+    | SelectOptions<TDefault>
+    | Exclude<SelectOptions<TDefault>, "default">,
+): Promise<never>;
+export async function select<T, TDefault = never>(
+  ops: [SelectOperation<T>],
+  options?: SelectOptions<T> | Exclude<SelectOptions<TDefault>, "default">,
+): Promise<SelectResult<T, TDefault>>;
+export async function select<T1, T2, TDefault = never>(
+  ops: [SelectOperation<T1>, SelectOperation<T2>],
+  options?:
+    | SelectOptions<TDefault>
+    | Exclude<SelectOptions<TDefault>, "default">,
+): Promise<
+  | SelectOperationResult<T1>
+  | SelectOperationResult<T2>
+  | SelectDefaultResult<TDefault>
+>;
+export async function select<T1, T2, T3, TDefault = never>(
+  ops: [SelectOperation<T1>, SelectOperation<T2>, SelectOperation<T3>],
+  options?:
+    | SelectOptions<TDefault>
+    | Exclude<SelectOptions<TDefault>, "default">,
+): Promise<
+  | SelectOperationResult<T1>
+  | SelectOperationResult<T2>
+  | SelectOperationResult<T3>
+  | SelectDefaultResult<TDefault>
+>;
+/**
+ * `select` takes a list of channel operations, and completes **at-most** one of
+ * them (the first operation that is ready).
+ *
+ * If the `default` option is provided, and no operation is immediately read,
+ * then all the operations will be aborted and the default value is returned.
+ *
+ * @template T, TDefault
+ * @param {(Receiver<T> | [Sender<T>, T])[]} ops
+ *   A list of channel operations.
+ *   Each item in this list can be either a receiver or a tuple of a sender and
+ *   the value to send.
+ * @param {SelectOptions<T> | Exclude<SelectOptions<T>, "default">} options
+ *   The options for `select`.
+ *   *Note: `undefined` is considered a valid value for `default`, so if you
+ *   want to wait for one of the operations, exclude `default` from the options
+ *   struct.*
+ *
+ * @return {Promise<[T, Receiver<T>] | [true, Sender<T>] | [TDefault, undefined]>}
+ *   If default is provided and no operation was ready, then the tuple
+ *   `[default, undefined]` is returned.
+ *
+ *   If a `receive` operation is completed, then the tuple `[T, Receiver<T>]`
+ *   is returned (where `T` is the value received, and `Receiver<T>` is the
+ *   receiver channel that returned it).
+ *
+ *   If a `send` operation is completed, then the tuple `[true, Sender<T>]` is
+ *   returned (where `Sender<T>` is the sender channel that we sent the value
+ *   with).
+ */
+export async function select<T, TDefault = never>(
+  ops: SelectOperation<T>[],
+  options?:
+    | SelectOptions<TDefault>
+    | Exclude<SelectOptions<TDefault>, "default">,
+): Promise<SelectResult<T, TDefault>> {
+  if (ops.length < 1) {
+    throw new TypeError("cannot perform select on less than 1 operation");
+  }
   const abortCtrl = new AbortController();
-  const selectPromises: Promise<void | T | undefined>[] = items.map((item) => {
+  const selectPromises: Promise<void | T | undefined>[] = ops.map((item) => {
     if (isReceiver(item)) {
       return item.receive(abortCtrl).then(([val]) => val);
     }
@@ -476,7 +584,7 @@ export async function select<T>(
   const results = await Promise.allSettled([...selectPromises]);
 
   for (let i = 0; i < results.length; i++) {
-    const item = items[i];
+    const item = ops[i];
     const result = results[i];
     if (result.status === "rejected") continue;
 
@@ -494,6 +602,11 @@ export async function select<T>(
   }
 
   throw new Error("Unreachable");
+}
+
+function isReceiver(x: unknown): x is Receiver<unknown> {
+  return x instanceof Object && "receive" in x &&
+    typeof x["receive"] === "function";
 }
 
 export function merge(): never;
