@@ -18,18 +18,26 @@ function isTopicFn<T>(x: T | TopicFn<T>): x is TopicFn<T> {
   return typeof x === "function";
 }
 
-enum SendModes {
+export enum BroadcastSendModes {
   WaitForAll = "WaitForAll",
   WaitForOne = "WaitForOne",
   ReturnImmediately = "ReturnImmediately",
 }
 
+export function isBroadcastSendMode(x: unknown): x is BroadcastSendModes {
+  return ([
+    BroadcastSendModes.WaitForAll,
+    BroadcastSendModes.WaitForOne,
+    BroadcastSendModes.ReturnImmediately,
+  ] as unknown[]).includes(x);
+}
+
 interface BroadcastChannelOptions extends ChannelOptions {
-  sendMode: SendModes;
+  sendMode: BroadcastSendModes;
 }
 
 export const DefaultBroadcastChannelOptions: BroadcastChannelOptions = {
-  sendMode: SendModes.ReturnImmediately,
+  sendMode: BroadcastSendModes.ReturnImmediately,
 };
 
 export class BroadcastChannel<TMsg, TTopic>
@@ -65,15 +73,15 @@ export class BroadcastChannel<TMsg, TTopic>
     }
 
     switch (this.options.sendMode) {
-      case SendModes.ReturnImmediately:
+      case BroadcastSendModes.ReturnImmediately:
         for (const target of targets) {
           await select([[target, msg]], { default: void 0, abortCtrl });
         }
         return;
-      case SendModes.WaitForOne:
+      case BroadcastSendModes.WaitForOne:
         await select(targets.map((target) => [target, msg]), { abortCtrl });
         return;
-      case SendModes.WaitForAll: {
+      case BroadcastSendModes.WaitForAll: {
         await Promise.all(targets.map((target) => {
           const targetAbortCtrl = abortCtrl && new AbortController();
           abortCtrl?.signal.addEventListener(

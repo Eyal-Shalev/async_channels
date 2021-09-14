@@ -1,11 +1,11 @@
 import {
-  Broadcaster,
+  BroadcastChannel,
   Channel,
 } from "https://cdn.skypack.dev/@eyalsh/async-channels@^v1.0.0-alpha25";
 
 const input = new Channel();
 
-const bcast = Broadcaster.from(input, ([x]) => {
+const bcast = BroadcastChannel.from(input, ([x]) => {
   const n = parseInt(x);
   if (Number.isNaN(n)) return "not-number";
   return n % 2 === 0 ? "even" : "odd";
