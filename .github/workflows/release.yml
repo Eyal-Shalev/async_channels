@@ -86,7 +86,7 @@ jobs:
           for f in $FORMATS; do rollup dist/esm/mod.js --file dist/"$f".bundle.min.js --format "$f" --name "$BUNDLE_NAME" --plugin terser; done
 
       - name: Create d.ts
-        run: rollup dist/esm/mod.js --file dist/bundle.d.ts --plugin dts
+        run: rollup dist/esm/mod.js --file dist/bundle.d.ts --format "es" --plugin dts
 
       - uses: actions/upload-artifact@v2
         with:
