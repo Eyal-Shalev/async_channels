@@ -6,7 +6,7 @@ on:
       - v*
 
 jobs:
-  bundle:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,8 +18,8 @@ jobs:
         with:
           deno-version: v1.x
 
-      - name: Deno bundle
-        run: bash ./scripts/bundle.bash
+      - name: Deno build
+        run: bash ./scripts/build.bash
 
       - uses: actions/upload-artifact@v2
         with:
@@ -55,7 +55,7 @@ jobs:
   rollup:
     name: Rollup
     runs-on: ubuntu-latest
-    needs: bundle
+    needs: build
     env:
       BUNDLE_NAME: async_channels
       FORMATS: |
