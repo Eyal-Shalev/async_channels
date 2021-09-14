@@ -236,6 +236,7 @@ Deno.test("pipeline", async () => {
 
   const pipeCh = ch
     .filter((x) => x % 2 !== 0)
+    .flatMap((x) => [x, x])
     .map((x) => x * 2)
     .reduce((prev, cur) => prev + cur);
 
@@ -243,7 +244,7 @@ Deno.test("pipeline", async () => {
     [1, 2, 3, 4, 5, 6].map((x) => ch.send(x)),
   ).then(() => ch.close());
 
-  assertEquals(await pipeCh.receive(), [18, true]);
+  assertEquals(await pipeCh.receive(), [36, true]);
   assertEquals(await pipeCh.receive(), [undefined, false]);
 
   await p;

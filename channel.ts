@@ -51,6 +51,10 @@ export interface ChannelOptions {
   debugExtra?: Record<string, unknown>;
 }
 
+export interface ChannelPipeOptions extends ChannelOptions {
+  signal?: AbortSignal;
+}
+
 export interface Closer {
   /**
    * Closes the channel.
@@ -170,7 +174,17 @@ export interface Receiver<T> extends AsyncIterable<T> {
    * @param {(val: T) => TOut} fn
    * @return {Receiver<TOut>}
    */
-  map<TOut>(fn: (val: T) => TOut | Promise<TOut>): Receiver<TOut>;
+  map<TOut>(
+    fn: (val: T) => TOut | Promise<TOut>,
+    bufferSize?: number,
+    options?: ChannelPipeOptions,
+  ): Receiver<TOut>;
+
+  flatMap<TOut>(
+    fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
+    bufferSize?: number,
+    options?: ChannelPipeOptions,
+  ): Receiver<TOut>;
 
   /**
    * forEach applies `fn` to each value in `this` channel, and returns a channel
@@ -179,11 +193,23 @@ export interface Receiver<T> extends AsyncIterable<T> {
    * @param {(val: T) => void} fn
    * @return {Receiver<void>}
    */
-  forEach(fn: (val: T) => void | Promise<void>): Receiver<void>;
+  forEach(
+    fn: (val: T) => void | Promise<void>,
+    bufferSize?: number,
+    options?: ChannelPipeOptions,
+  ): Receiver<void>;
 
-  filter(fn: (val: T) => boolean | Promise<boolean>): Receiver<T>;
+  filter(
+    fn: (val: T) => boolean | Promise<boolean>,
+    bufferSize?: number,
+    options?: ChannelPipeOptions,
+  ): Receiver<T>;
 
-  reduce(fn: (prev: T, current: T) => T | Promise<T>): Receiver<T>;
+  reduce(
+    fn: (prev: T, current: T) => T | Promise<T>,
+    bufferSize?: number,
+    options?: ChannelPipeOptions,
+  ): Receiver<T>;
 }
 
 export type SendCloser<T> = Sender<T> & Closer;
@@ -360,55 +386,152 @@ export class Channel<T>
     }
   }
 
-  map<TOut>(fn: (val: T) => TOut | Promise<TOut>): Receiver<TOut> {
-    const outChan = new Channel<TOut>(this.queue.capacity);
+  map<TOut>(
+    fn: (val: T) => TOut | Promise<TOut>,
+    bufferSize = this.queue.capacity,
+    options: ChannelPipeOptions | undefined = this.options,
+  ): Receiver<TOut> {
+    const outChan = new Channel<TOut>(bufferSize, options);
     (async () => {
-      for await (const current of this) {
-        await outChan.send(await fn(current));
+      while (true) {
+        const ctrl = new AbortController();
+        options?.signal?.addEventListener("abort", () => ctrl.abort());
+        try {
+          const res = await this.receive(ctrl);
+          if (!res[1]) return;
+          await outChan.send(await fn(res[0]));
+        } catch (e) {
+          if (e instanceof AbortedError) return;
+          throw e;
+        }
       }
     })().catch((err) => this.error("map", fn, err))
       .finally(() => outChan.close());
     return outChan;
   }
 
-  forEach(fn: (val: T) => void | Promise<void>): Receiver<void> {
-    const outChan = new Channel<void>(this.queue.capacity);
+  flatMap<TOut>(
+    fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
+    bufferSize = this.queue.capacity,
+    options: ChannelPipeOptions | undefined = this.options,
+  ): Receiver<TOut> {
+    const outChan = new Channel<TOut>(bufferSize, options);
     (async () => {
-      for await (const current of this) {
-        await fn(current);
+      while (true) {
+        const ctrl = new AbortController();
+        options?.signal?.addEventListener("abort", () => ctrl.abort());
+        try {
+          const res = await this.receive(ctrl);
+          if (!res[1]) return;
+          for await (const item of await fn(res[0])) {
+            await outChan.send(item);
+          }
+        } catch (e) {
+          if (e instanceof AbortedError) return;
+          throw e;
+        }
       }
     })().catch((err) => this.error("map", fn, err))
       .finally(() => outChan.close());
     return outChan;
   }
 
-  filter(fn: (val: T) => boolean | Promise<boolean>): Receiver<T> {
-    const outChan = new Channel<T>(this.queue.capacity);
+  forEach(
+    fn: (val: T) => void | Promise<void>,
+    bufferSize = this.queue.capacity,
+    options: ChannelPipeOptions | undefined = this.options,
+  ): Receiver<void> {
+    const outChan = new Channel<void>(bufferSize, options);
     (async () => {
-      for await (const current of this) {
-        if (!(await fn(current))) continue;
-        await outChan.send(current);
+      while (true) {
+        const ctrl = new AbortController();
+        options?.signal?.addEventListener("abort", () => ctrl.abort());
+        try {
+          const res = await this.receive(ctrl);
+          if (!res[1]) return;
+          await fn(res[0]);
+        } catch (e) {
+          if (e instanceof AbortedError) return;
+          throw e;
+        }
       }
     })().catch((err) => this.error("map", fn, err))
       .finally(() => outChan.close());
     return outChan;
   }
 
-  reduce(fn: (prev: T, current: T) => T | Promise<T>): Receiver<T> {
-    const outChan = new Channel<T>(this.queue.capacity);
+  filter(
+    fn: (val: T) => boolean | Promise<boolean>,
+    bufferSize = this.queue.capacity,
+    options: ChannelPipeOptions | undefined = this.options,
+  ): Receiver<T> {
+    const outChan = new Channel<T>(bufferSize, options);
+    (async () => {
+      while (true) {
+        const ctrl = new AbortController();
+        options?.signal?.addEventListener("abort", () => ctrl.abort());
+        try {
+          const res = await this.receive(ctrl);
+          if (!res[1]) return;
+          if (!(await fn(res[0]))) continue;
+          await outChan.send(res[0]);
+        } catch (e) {
+          if (e instanceof AbortedError) return;
+          throw e;
+        }
+      }
+    })().catch((err) => this.error("map", fn, err))
+      .finally(() => outChan.close());
+    return outChan;
+  }
+
+  reduce(
+    fn: (prev: T, current: T) => T | Promise<T>,
+    bufferSize = this.queue.capacity,
+    options: ChannelPipeOptions | undefined = this.options,
+  ): Receiver<T> {
+    const outChan = new Channel<T>(bufferSize, options);
+    this.debug("reduce(fn)", { fn });
 
     (async () => {
-      const res = await this.receive();
+      const makeAbortCtrl = () => {
+        if (!options?.signal) return;
+        const ctrl = new AbortController();
+        options.signal.addEventListener("abort", () => ctrl.abort());
+        return ctrl;
+      };
+
+      let prev: T;
+
+      const res = await this.receive(makeAbortCtrl());
       if (!res[1]) return;
+      prev = res[0];
 
-      let prev = res[0];
-      for await (const current of this) {
-        prev = await fn(prev, current);
+      while (true) {
+        const res = await this.receive(makeAbortCtrl());
+        if (!res[1]) {
+          return await outChan.send(prev);
+        }
+        prev = await fn(prev, res[0]);
       }
-
-      await outChan.send(prev);
     })().catch((err) => this.error("reduce", fn, err))
       .finally(() => outChan.close());
+
+    return outChan;
+  }
+
+  static from<T>(
+    input: Iterable<T> | AsyncIterable<T>,
+    bufferSize?: number,
+    options?: ChannelOptions,
+  ): Receiver<T> {
+    const outChan = new Channel<T>(bufferSize, options);
+
+    (async () => {
+      for await (const item of input) {
+        await outChan.send(item);
+      }
+    })();
 
     return outChan;
   }
@@ -490,6 +613,7 @@ export class AbortedError extends Error {
  */
 export interface SelectOptions<TDefault = never> {
   default: TDefault;
+  abortCtrl?: AbortController;
 }
 
 type SelectOperation<T> = Receiver<T> | [Sender<T>, T];
@@ -499,37 +623,6 @@ type SelectResult<T, TDefault> =
   | SelectOperationResult<T>
   | SelectDefaultResult<TDefault>;
 
-export async function select<T, TDefault = never>(
-  ops: [],
-  options?:
-    | SelectOptions<TDefault>
-    | Exclude<SelectOptions<TDefault>, "default">,
-): Promise<never>;
-export async function select<T, TDefault = never>(
-  ops: [SelectOperation<T>],
-  options?: SelectOptions<T> | Exclude<SelectOptions<TDefault>, "default">,
-): Promise<SelectResult<T, TDefault>>;
-export async function select<T1, T2, TDefault = never>(
-  ops: [SelectOperation<T1>, SelectOperation<T2>],
-  options?:
-    | SelectOptions<TDefault>
-    | Exclude<SelectOptions<TDefault>, "default">,
-): Promise<
-  | SelectOperationResult<T1>
-  | SelectOperationResult<T2>
-  | SelectDefaultResult<TDefault>
->;
-export async function select<T1, T2, T3, TDefault = never>(
-  ops: [SelectOperation<T1>, SelectOperation<T2>, SelectOperation<T3>],
-  options?:
-    | SelectOptions<TDefault>
-    | Exclude<SelectOptions<TDefault>, "default">,
-): Promise<
-  | SelectOperationResult<T1>
-  | SelectOperationResult<T2>
-  | SelectOperationResult<T3>
-  | SelectDefaultResult<TDefault>
->;
 /**
  * `select` takes a list of channel operations, and completes **at-most** one of
  * them (the first operation that is ready).
@@ -542,10 +635,10 @@ export async function select<T1, T2, T3, TDefault = never>(
  *   A list of channel operations.
  *   Each item in this list can be either a receiver or a tuple of a sender and
  *   the value to send.
- * @param {SelectOptions<T> | Exclude<SelectOptions<T>, "default">} options
+ * @param {SelectOptions<T> | Omit<SelectOptions<T>, "default">} options
  *   The options for `select`.
  *   *Note: `undefined` is considered a valid value for `default`, so if you
- *   want to wait for one of the operations, exclude `default` from the options
+ *   want to wait for one of the operations, omit `default` from the options
  *   struct.*
  *
  * @return {Promise<[T, Receiver<T>] | [true, Sender<T>] | [TDefault, undefined]>}
@@ -564,12 +657,12 @@ export async function select<T, TDefault = never>(
   ops: SelectOperation<T>[],
   options?:
     | SelectOptions<TDefault>
-    | Exclude<SelectOptions<TDefault>, "default">,
+    | Omit<SelectOptions<TDefault>, "default">,
 ): Promise<SelectResult<T, TDefault>> {
   if (ops.length < 1) {
     throw new TypeError("cannot perform select on less than 1 operation");
   }
-  const abortCtrl = new AbortController();
+  const abortCtrl = options?.abortCtrl || new AbortController();
   const selectPromises: Promise<void | T | undefined>[] = ops.map((item) => {
     if (isReceiver(item)) {
       return item.receive(abortCtrl).then(([val]) => val);
@@ -633,7 +726,6 @@ export function merge<T1, T2, T3, T4, T5>(
   inChan4: Receiver<T4>,
   inChan5: Receiver<T5>,
 ): Receiver<T1 | T2 | T3 | T4 | T5>;
-export function merge<T>(...inChans: Receiver<T>[]): Receiver<T>;
 export function merge<T>(...inChans: Receiver<T>[]): Receiver<T> {
   if (inChans.length < 2) {
     throw new TypeError("cannot merge less than 2 channels");
