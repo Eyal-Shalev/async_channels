@@ -9,7 +9,7 @@ import {
   useState,
 } from "https://cdn.skypack.dev/pin/preact@v10.5.14-NU6DIzRE0F11UYcL6Ija/mode=imports,min/optimized/preact/hooks.js";
 import htm from "https://cdn.skypack.dev/pin/htm@v3.1.0-Lnrl6ooU0xR8YCDnwwW6/mode=imports,min/optimized/htm.js";
-import { Channel } from "https://cdn.skypack.dev/@eyalsh/async_channels";
+import { Channel } from "https://cdn.skypack.dev/@eyalsh/async_channels@^v1.0.0-alpha29";
 
 // Initialize htm with Preact
 const html = htm.bind(h);
