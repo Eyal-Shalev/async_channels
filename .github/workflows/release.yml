@@ -65,7 +65,7 @@ jobs:
         iife
         umd
         system
-    
+
     steps:
       - name: Setup NodeJS
         uses: actions/setup-node@v2
@@ -82,8 +82,8 @@ jobs:
 
       - name: Create Bundles
         run: |
-          for f in $FORMATS; do rollup dist/bundle.js --file dist/"$f".bundle.js --format "$f" --name "$BUNDLE_NAME"; done
-          for f in $FORMATS; do rollup dist/bundle.js --file dist/"$f".bundle.min.js --format "$f" --name "$BUNDLE_NAME" --plugin terser; done
+          for f in $FORMATS; do rollup dist/esm/mod.js --file dist/"$f".bundle.js --format "$f" --name "$BUNDLE_NAME"; done
+          for f in $FORMATS; do rollup dist/esm/mod.js --file dist/"$f".bundle.min.js --format "$f" --name "$BUNDLE_NAME" --plugin terser; done
 
       - uses: actions/upload-artifact@v2
         with:
@@ -170,7 +170,7 @@ jobs:
           name: dist
           path: dist
 
-      - uses: marvinpinto/action-automatic-releases@latest 
+      - uses: marvinpinto/action-automatic-releases@latest
         if: ${{ steps.get_version.outputs.IS_PRE }}
         with:
           prerelease: true
@@ -180,6 +180,7 @@ jobs:
           files: |
             LICENSE
             README.md
+            dist/esm
             dist/*.bundle.js
             dist/*.bundle.min.js
 
@@ -192,5 +193,6 @@ jobs:
           files: |
             LICENSE
             README.md
+            dist/esm
             dist/*.bundle.js
             dist/*.bundle.min.js

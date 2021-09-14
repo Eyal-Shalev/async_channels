@@ -39,7 +39,8 @@ const data = {
   exports: {
     ".": {
       require: "./dist/cjs.bundle.js",
-      import: "./dist/es.bundle.js",
+      import: "./dist/esm/mod.js",
+      types: "./dist/esm/mod.d.ts",
     },
   },
 };
