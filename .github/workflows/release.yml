@@ -67,6 +67,11 @@ jobs:
         system
 
     steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: dist
+          path: dist
+
       - name: Setup NodeJS
         uses: actions/setup-node@v2
         with:
@@ -79,11 +84,6 @@ jobs:
 
       - name: Create d.ts
         run: rollup dist/esm/mod.js --file dist/bundle.d.ts --format "es" --plugin dts
-
-      - uses: actions/download-artifact@v2
-        with:
-          name: dist
-          path: dist
 
       - name: Create Bundles
         run: |
