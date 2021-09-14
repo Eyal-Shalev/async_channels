@@ -4,7 +4,7 @@ import * as flags from "deno/flags/mod.ts";
 import * as path from "deno/path/mod.ts";
 import * as fs from "deno/fs/mod.ts";
 
-const { debug: debugEnabled, time: timeEnabled } = flags.parse(Deno.args, {
+const { debug: debugEnabled, time: _timeEnabled } = flags.parse(Deno.args, {
   boolean: ["debug", "time"],
 });
 function debug(...args: unknown[]) {
