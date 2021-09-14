@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@eyalsh/async_channels": "^v1.0.0-alpha29",
+    "@eyalsh/async_channels": "^v1.0.0-alpha39",
     "express": "^4.17.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",

@@ -1,5 +1,4 @@
-import * as async_channels from "@eyalsh/async_channels"
-const {BroadcastChannel, BroadcastSendModes} = async_channels
+import {BroadcastChannel, BroadcastSendModes} from "@eyalsh/async_channels"
 import express from "express"
 
 const app = express();
