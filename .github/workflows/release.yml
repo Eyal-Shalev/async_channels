@@ -73,13 +73,12 @@ jobs:
           node-version: 14.x
 
       - name: Setup Rollup
-        run: npm install --global rollup rollup-plugin-dts
+        run: |
+          npm install rollup rollup-plugin-terser rollup-plugin-dts
+          npm install --global rollup rollup-plugin-terser rollup-plugin-dts
 
       - name: Create d.ts
         run: rollup dist/esm/mod.js --file dist/bundle.d.ts --format "es" --plugin dts
-
-      - name: Setup Rollup
-        run: npm install --global rollup rollup-plugin-terser
 
       - uses: actions/download-artifact@v2
         with:
