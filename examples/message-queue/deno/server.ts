@@ -13,7 +13,7 @@ import {
 } from "../../../broadcast.ts";
 import { AbortedError, Channel } from "../../../channel.ts";
 
-type Message = Record<string, unknown> & { event?: string } & { topic: string };
+type Message = Record<string, unknown> & { topic: string };
 
 const router = new Router();
 
