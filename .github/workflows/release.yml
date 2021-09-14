@@ -73,7 +73,7 @@ jobs:
           node-version: 14.x
 
       - name: Setup Rollup
-        run: npm install --global rollup rollup-plugin-terser
+        run: npm install --global rollup rollup-plugin-terser rollup-plugin-dts
 
       - uses: actions/download-artifact@v2
         with:
@@ -84,6 +84,9 @@ jobs:
         run: |
           for f in $FORMATS; do rollup dist/esm/mod.js --file dist/"$f".bundle.js --format "$f" --name "$BUNDLE_NAME"; done
           for f in $FORMATS; do rollup dist/esm/mod.js --file dist/"$f".bundle.min.js --format "$f" --name "$BUNDLE_NAME" --plugin terser; done
+
+      - name: Create d.ts
+        run: rollup dist/esm/mod.js --file dist/bundle.d.ts --plugin dts
 
       - uses: actions/upload-artifact@v2
         with:
@@ -158,6 +161,9 @@ jobs:
     needs: rollup
 
     steps:
+      - name: Git Checkout
+        uses: actions/checkout@v2
+
       - name: Is pre-release
         id: is_pre
         run: echo ::set-output name=IS_PRE::"$([[ $GITHUB_REF =~ refs\/tags\/v.+-.+ ]] && echo 0 || echo 1)"
@@ -181,6 +187,7 @@ jobs:
             LICENSE
             README.md
             dist/esm
+            dist/bundle.d.ts
             dist/*.bundle.js
             dist/*.bundle.min.js
 
