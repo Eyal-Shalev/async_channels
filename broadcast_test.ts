@@ -1,7 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.106.0/testing/asserts.ts";
 import { BroadcastChannel } from "./broadcast.ts";
-import { Channel } from "./channel.ts";
-import { sleep } from "./internal/utils.ts";
 
 Deno.test("broadcast", async () => {
   type TMsg = { topic: string; tweet: string };
