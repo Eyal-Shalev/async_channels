@@ -69,8 +69,8 @@ if (diagnostics.length > 0) {
 }
 
 /**
-   * Replaces absolute file URLs with relative paths.
-   */
+ * Replaces absolute file URLs with relative paths.
+ */
 function replaceUrls(contents: string): string {
   moduleNames.forEach((moduleName) => {
     contents = contents.replaceAll(
