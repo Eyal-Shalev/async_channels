@@ -1,7 +1,7 @@
 import {
   BroadcastChannel,
   Channel,
-} from "https://cdn.skypack.dev/@eyalsh/async-channels@^v1.0.0-alpha25";
+} from "https://cdn.skypack.dev/@eyalsh/async_channels@^v1.0.0-alpha29";
 
 const input = new Channel();
 

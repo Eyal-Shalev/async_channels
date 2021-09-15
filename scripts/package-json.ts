@@ -28,8 +28,9 @@ const data = {
   license: "GPL-3.0-only",
   author: `Eyal Shalev <eyalsh@gmail.com> (https://github.com/Eyal-Shalev)`,
   main: "dist/cjs.bundle.js",
-  module: "dist/esm/mod.js",
-  types: "dist/esm/mod.d.ts",
+  module: "dist/es.bundle.js",
+  types: "dist/bundle.d.ts",
+  type: "module",
   repository: {
     type: "git",
     url: `github:Eyal-Shalev/${name}`,

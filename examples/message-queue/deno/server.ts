@@ -159,4 +159,25 @@ router.get("/api/queue/:id", async (ctx: RouterContext) => {
 const app = new Application();
 app.use(router.routes());
 app.use(router.allowedMethods());
+
+import { fromFileUrl, join } from "deno/path/mod.ts";
+const staticRoot = join(fromFileUrl(import.meta.url), "../static/");
+
+const readPermQuery = await Deno.permissions.query({
+  name: "read",
+  path: staticRoot,
+});
+
+if ("granted" !== readPermQuery.state) {
+  await Deno.permissions.request({ name: "read", path: staticRoot });
+}
+
+// Send static content
+app.use(async (ctx) => {
+  try {
+    await ctx.send({ root: staticRoot, index: "index.html" });
+  } catch {
+    await ctx.send({ root: staticRoot, path: "index.html" });
+  }
+});
 await app.listen({ port: 8000 });
