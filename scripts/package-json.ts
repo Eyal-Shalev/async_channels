@@ -30,6 +30,7 @@ const data = {
   main: "dist/cjs.bundle.js",
   module: "dist/es.bundle.js",
   types: "dist/bundle.d.ts",
+  type: "module",
   repository: {
     type: "git",
     url: `github:Eyal-Shalev/${name}`,

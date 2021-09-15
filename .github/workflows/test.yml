@@ -20,10 +20,10 @@ jobs:
           deno-version: v1.x
 
       - name: Verify formatting
-        run: deno fmt --ignore="examples,dist" --check
+        run: deno fmt --check
 
       - name: Run linter
-        run: deno lint --ignore="examples,dist"
+        run: deno lint
 
       - name: Run tests
         run: bash ./scripts/run-tests.bash
