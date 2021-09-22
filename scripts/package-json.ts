@@ -27,9 +27,9 @@ const data = {
   },
   license: "GPL-3.0-only",
   author: `Eyal Shalev <eyalsh@gmail.com> (https://github.com/Eyal-Shalev)`,
-  main: "dist/cjs.bundle.js",
-  module: "dist/es.bundle.js",
-  types: "dist/bundle.d.ts",
+  main: `dist/${name}.cjs.js`,
+  module: `dist/${name}.esm.js`,
+  types: `dist/${name}.d.ts`,
   type: "module",
   repository: {
     type: "git",
@@ -40,8 +40,8 @@ const data = {
   },
   exports: {
     ".": {
-      require: "./dist/cjs.bundle.js",
-      import: "./dist/es.bundle.js",
+      require: `./dist/${name}.cjs.js`,
+      import: `./dist/${name}.esm.js`,
     },
   },
 };
