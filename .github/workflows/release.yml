@@ -94,9 +94,9 @@ jobs:
 
       - name: Create Bundles
         run: |
-          rollup dist/esm/mod.js --file "dist/${BUNDLE_NAME}.d.ts" --format "es" --plugin "dts,license={banner: {content: {file: 'LICENSE_HEADER'}}}"
-          for f in $FORMATS; do rollup dist/esm/mod.js --file "dist/${BUNDLE_NAME}-$f.js" --format "$f" --name "${BUNDLE_NAME}" --plugin "license={banner: {content: {file: 'LICENSE_HEADER'}}}"; done
-          for f in $FORMATS; do rollup dist/esm/mod.js --file "dist/${BUNDLE_NAME}-$f.min.js" --format "$f" --name "${BUNDLE_NAME}" --plugin "terser,license={banner: {content: {file: 'LICENSE_HEADER'}}}"; done
+          rollup dist/esm/mod.js --file "dist/${BUNDLE_NAME}.d.ts" --format "es" --plugin dts --plugin "license={banner: { content: {file: 'LICENSE_HEADER'}, commentStyle: 'ignored'}}"
+          for f in $FORMATS; do rollup dist/esm/mod.js --file "dist/${BUNDLE_NAME}.$f.js" --format "$f" --name "${BUNDLE_NAME}" --plugin "license={banner: { content: {file: 'LICENSE_HEADER'}, commentStyle: 'ignored'}}"; done
+          for f in $FORMATS; do rollup dist/esm/mod.js --file "dist/${BUNDLE_NAME}.$f.min.js" --format "$f" --name "${BUNDLE_NAME}" --plugin terser --plugin "license={banner: { content: {file: 'LICENSE_HEADER'}, commentStyle: 'ignored'}}"; done
 
       - uses: actions/upload-artifact@v2
         with:
