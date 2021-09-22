@@ -33,6 +33,39 @@ const ch = new Channel();
 // ...
 ```
 
+### NPM (ESM)
+
+Released under both npmjs & github packages:
+
+- [npmjs.com:@eyalsh/async_channels](https://www.npmjs.com/package/@eyalsh/async_channels)
+- [github.com:@Eyal-Shalev/async_channels](https://github.com/Eyal-Shalev/async_channels/packages/983326)
+
+```javascript
+import { Channel } from "@eyalsh/async_channels"; // or "@eyal-shalev/async_channels" for github packages.
+const ch = new Channel();
+// ...
+```
+
+### NPM (CommonJS)
+
+Released under both npmjs & github packages:
+
+- [npmjs.com:@eyalsh/async_channels](https://www.npmjs.com/package/@eyalsh/async_channels)
+- [github.com:@Eyal-Shalev/async_channels](https://github.com/Eyal-Shalev/async_channels/packages/983326)
+
+```javascript
+const { Channel } = require("@eyalsh/async_channels"); // or "@eyal-shalev/async_channels" for github packages.
+const ch = new Channel();
+// ...
+```
+
+### Deno
+
+```typescript
+import { Channel } from "https://deno.land/x/async_channels/mod.ts";
+const ch = new Channel<unknown>();
+```
+
 ## Example
 
 ```typescript
