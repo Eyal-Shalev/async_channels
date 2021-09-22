@@ -208,10 +208,28 @@ Deno.test("map", async () => {
   assertEquals(expected.length, 0, "expected stack isn't empty");
 });
 
+Deno.test("flat", async () => {
+  await 0;
+  const ch = new Channel<string[]>();
+  const flatCh = ch.flat();
+  const p = Promise.all([
+    ch.send(["Hello", "world"]),
+    ch.send(["from", "Array"]),
+  ]).then(() => ch.close());
+
+  const expected = ["Hello", "world", "from", "Array"];
+  for await (const x of flatCh) {
+    assertEquals(x, expected.shift());
+  }
+
+  await p;
+  assertEquals(expected.length, 0, "expected stack isn't empty");
+});
+
 Deno.test("merge", async () => {
   const ch1 = new Channel<string>();
   const ch2 = new Channel<number>();
-  const mergedChan = merge(ch1, ch2);
+  const mergedChan = merge([ch1, ch2]);
 
   const p = Promise.all([
     ch1.send("Hello"),
