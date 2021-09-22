@@ -196,8 +196,8 @@ jobs:
           files: |
             LICENSE
             README.md
-            dist/${BUNDLE_NAME}.d.ts
-            dist/${BUNDLE_NAME}*.js
+            dist/*.js
+            dist/*.d.ts
 
       - uses: marvinpinto/action-automatic-releases@latest
         if: ${{ ! steps.get_version.outputs.IS_PRE }}
@@ -208,5 +208,5 @@ jobs:
           files: |
             LICENSE
             README.md
-            dist/${BUNDLE_NAME}.d.ts
-            dist/${BUNDLE_NAME}*.js
+            dist/*.js
+            dist/*.d.ts
