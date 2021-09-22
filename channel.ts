@@ -51,7 +51,21 @@ export interface ChannelOptions {
   debugExtra?: Record<string, unknown>;
 }
 
+/**
+ * Options for pipe operations.
+ *
+ * @see Channel.map
+ * @see Channel.flatMap
+ * @see Channel.foreach
+ * @see Channel.filter
+ * @see Channel.reduce
+ */
 export interface ChannelPipeOptions extends ChannelOptions {
+  /**
+   * If provided, the pipe operation will halt when the signal is triggered.
+   *
+   * @type {AbortSignal}
+   */
   signal?: AbortSignal;
 }
 
@@ -168,7 +182,8 @@ export interface Receiver<T> extends AsyncIterable<T> {
    * map returns a receiver channel that contains the results of applying `fn`
    * to each value of `this` channel.
    *
-   * The receiver channel will close, when the original channel closes.
+   * The receiver channel will close, when the original channel closes (or if
+   * the provided signal is triggered).
    *
    * @template TOut
    * @param {(val: T) => TOut} fn
@@ -180,6 +195,18 @@ export interface Receiver<T> extends AsyncIterable<T> {
     options?: ChannelPipeOptions,
   ): Receiver<TOut>;
 
+  /**
+   * flatMap returns a receiver channel that contains the flattened (1 level)
+   * results of applying `fn` to each value of `this` channel.
+   *
+   * The receiver channel will close, when the original channel closes (or if
+   * the provided signal is triggered).
+   *
+   * @template TOut
+   * @param {(val: T) => Iterable<TOut> | AsyncIterable<TOut>} fn
+   * @param {number} [bufferSize]
+   * @param {ChannelPipeOptions} [options]
+   */
   flatMap<TOut>(
     fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
     bufferSize?: number,
@@ -187,8 +214,25 @@ export interface Receiver<T> extends AsyncIterable<T> {
   ): Receiver<TOut>;
 
   /**
+   * flat returns a receiver channel that contains the flattened (1 level)
+   * values of each value of `this` channel.
+   *
+   * The receiver channel will close, when the original channel closes (or if
+   * the provided signal is triggered).
+   *
+   * @param {number} [bufferSize]
+   * @param {ChannelPipeOptions} [options]
+   */
+  flat<K>(
+    this: Channel<Iterable<K> | AsyncIterable<K>>,
+    bufferSize?: number,
+    options?: ChannelPipeOptions,
+  ): Receiver<K>;
+
+  /**
    * forEach applies `fn` to each value in `this` channel, and returns a channel
-   * that will close after `this` channel closes.
+   * that will close after `this` channel closes (or if
+   * the provided signal is triggered).
    *
    * @param {(val: T) => void} fn
    * @return {Receiver<void>}
@@ -431,8 +475,36 @@ export class Channel<T>
           throw e;
         }
       }
-    })().catch((err) => this.error("map", fn, err))
+    })().catch((err) => this.error("flatMap", fn, err))
       .finally(() => outChan.close());
+    return outChan;
+  }
+
+  flat<K>(
+    this: Channel<Iterable<K> | AsyncIterable<K>>,
+    bufferSize?: number,
+    options: ChannelPipeOptions | undefined = this.options,
+  ): Receiver<K> {
+    const outChan = new Channel<K>(bufferSize, options);
+    (async () => {
+      while (true) {
+        const ctrl = new AbortController();
+        options?.signal?.addEventListener("abort", () => ctrl.abort());
+        try {
+          const res = await this.receive();
+          if (!res[1]) return;
+
+          for await (const item of res[0]) {
+            await outChan.send(item);
+          }
+        } catch (e) {
+          if (e instanceof AbortedError) return;
+          throw e;
+        }
+      }
+    })().catch((err) => this.error("flat", err))
+      .finally(() => outChan.close());
+
     return outChan;
   }
 
@@ -702,35 +774,48 @@ function isReceiver(x: unknown): x is Receiver<unknown> {
     typeof x["receive"] === "function";
 }
 
-export function merge(): never;
-export function merge(inChans: Receiver<unknown>): never;
+export type MergeOptions = ChannelOptions & { bufferSize?: number };
+export function merge(
+  inChans: [],
+  options?: MergeOptions,
+): never;
+export function merge(
+  inChans: [Receiver<unknown>],
+  options?: MergeOptions,
+): never;
 export function merge<T1, T2>(
-  inChan1: Receiver<T1>,
-  inChan2: Receiver<T2>,
+  inChans: [
+    Receiver<T1>,
+    Receiver<T2>,
+  ],
+  options?: MergeOptions,
 ): Receiver<T1 | T2>;
 export function merge<T1, T2, T3>(
-  inChan1: Receiver<T1>,
-  inChan2: Receiver<T2>,
-  inChan3: Receiver<T3>,
+  inChans: [
+    Receiver<T1>,
+    Receiver<T2>,
+    Receiver<T3>,
+  ],
+  options?: MergeOptions,
 ): Receiver<T1 | T2 | T3>;
-export function merge<T1, T2, T3, T4>(
-  inChan1: Receiver<T1>,
-  inChan2: Receiver<T2>,
-  inChan3: Receiver<T3>,
-  inChan4: Receiver<T4>,
-): Receiver<T1 | T2 | T3 | T4>;
-export function merge<T1, T2, T3, T4, T5>(
-  inChan1: Receiver<T1>,
-  inChan2: Receiver<T2>,
-  inChan3: Receiver<T3>,
-  inChan4: Receiver<T4>,
-  inChan5: Receiver<T5>,
-): Receiver<T1 | T2 | T3 | T4 | T5>;
-export function merge<T>(...inChans: Receiver<T>[]): Receiver<T> {
+/**
+ * Takes a collection of source channels and returns a channel
+ * which contains all values taken from them.
+ *
+ * @template T
+ * @param {Receiver<T>[]} inChans
+ * @param {MergeOptions} [options={}]
+ * @returns {Receiver<T>}
+ */
+export function merge<T>(
+  inChans: Receiver<T>[],
+  options: MergeOptions = {},
+): Receiver<T> {
   if (inChans.length < 2) {
     throw new TypeError("cannot merge less than 2 channels");
   }
-  const outChan = new Channel<T>();
+  const { bufferSize, ...chOpts } = options;
+  const outChan = new Channel<T>(bufferSize, chOpts);
 
   Promise.all(inChans.map((inChan) =>
     (async () => {
