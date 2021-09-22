@@ -79,7 +79,7 @@ jobs:
           node-version: 14.x
 
       - name: Setup Rollup
-        run: npm install --global rollup rollup-plugin-terser rollup-plugin-dts typescript
+        run: npm install --global rollup@^2.57.0 rollup-plugin-terser@^7.0.2 rollup-plugin-dts@^4.0.0 rollup-plugin-license@^2.5.0 typescript
 
       - uses: actions/download-artifact@v2
         with:
