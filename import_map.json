@@ -1,6 +1,6 @@
 {
   "imports": {
-    "deno/": "https://deno.land/std@0.106.0/",
+    "deno/": "https://deno.land/std@0.108.0/",
     "semver": "https://deno.land/x/semver@v1.4.0/mod.ts"
   }
 }
