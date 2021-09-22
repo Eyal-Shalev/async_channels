@@ -5,6 +5,34 @@
 Inspired by `Go` & `Clojure` Channels, `async_channels` provides channels as an
 asynchronous communication method between asynchronous functions.
 
+## Installation
+
+### Vanilla JS (CDN)
+
+Import the module from one of the CDNs that mirror
+[npmjs.com](https://npmjs.com):
+
+- [skypack/@eyalsh/async_channels](https://skypack.dev/view/@eyalsh/async_channels)
+- [unpkg/@eyalsh/async_channels](https://unpkg.com/@eyalsh/async_channels/dist/async_channels.esm.js)
+
+```javascript
+import { Channel } from "https://cdn.skypack.dev/@eyalsh/async_channels";
+const ch = new Channel();
+// ...
+```
+
+### Vanilla JS (Download)
+
+A compiled version exists for every major dependency management system in the
+[releases section](https://github.com/Eyal-Shalev/async_channels/releases).\
+Download one of them and import it
+
+```javascript
+import { Channel } from "/path/to/async_channels.esm.js";
+const ch = new Channel();
+// ...
+```
+
 ## Example
 
 ```typescript
