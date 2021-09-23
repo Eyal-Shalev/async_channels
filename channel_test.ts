@@ -185,11 +185,32 @@ Deno.test("flat", async () => {
 });
 
 Deno.test("groupBy", async () => {
-  await 0;
   const ch = new Channel<number>(0);
   const { even: evenCh, odd: oddCh } = ch.groupBy((x) =>
     x % 2 === 0 ? "even" : "odd"
   );
+  const expected = Object.freeze({
+    evens: [2, 4, 6],
+    odds: [1, 3, 5],
+  });
+
+  const sendP = Promise.all(
+    [1, 2, 3, 4, 5, 6].map((x) => ch.send(x)),
+  ).finally(() => ch.close());
+
+  const receiveP = Promise.all([
+    evenCh.forEach((n) => assertEquals(n, expected.evens.shift())),
+    oddCh.forEach((n) => assertEquals(n, expected.odds.shift())),
+  ]);
+
+  await Promise.all([sendP, receiveP]);
+});
+
+Deno.test("duplicate", async () => {
+  const ch = new Channel<number>(0);
+  const [ch0, ch1] = ch.duplicate(2, undefined, { sendMode: "WaitForOne" });
+  const evenCh = ch0.filter((n) => n % 2 === 0);
+  const oddCh = ch1.filter((n) => n % 2 === 1);
   const expected = Object.freeze({
     evens: [2, 4, 6],
     odds: [1, 3, 5],

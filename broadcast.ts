@@ -3,10 +3,11 @@ import {
   ChannelOptions,
   Closer,
   Receiver,
-  SendCloser,
   Sender,
 } from "./channel.ts";
 import { select, SelectOperation } from "./select.ts";
+
+type SendCloser<T> = Sender<T> & Closer;
 
 export interface Subscribable<TMsg, TTopic> {
   subscribe(topic: TTopic): [Receiver<TMsg>, () => void];
