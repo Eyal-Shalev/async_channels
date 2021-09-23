@@ -4,6 +4,7 @@ import {
   Closer,
   Receiver,
   select,
+  SelectOperation,
   SendCloser,
   Sender,
 } from "./channel.ts";
@@ -78,7 +79,14 @@ export class BroadcastChannel<TMsg, TTopic>
         }
         return;
       case "WaitForOne":
-        await select(targets.map((target) => [target, msg]), { abortCtrl });
+        console.assert(
+          targets.length > 1,
+          "BroadcastChannel has at least 1 subscriber",
+        );
+        await select(
+          targets.map((target) => [target, msg] as SelectOperation<TMsg>),
+          { abortCtrl },
+        );
         return;
       case "WaitForAll": {
         await Promise.all(targets.map((target) => {

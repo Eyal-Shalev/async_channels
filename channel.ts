@@ -8,7 +8,7 @@ import {
   Transition,
   WaitingForAck,
 } from "./internal/state-machine.ts";
-import { sleep } from "./internal/utils.ts";
+import { isNonNegativeSafeInteger, sleep } from "./internal/utils.ts";
 
 export { InvalidTransitionError } from "./internal/state-machine.ts";
 
@@ -282,8 +282,8 @@ export class Channel<T>
     bufferSize = 0,
     protected readonly options?: ChannelOptions,
   ) {
-    if (!Number.isSafeInteger(bufferSize) || bufferSize < 0) {
-      throw new TypeError("bufferSize must be a safe positive integer.");
+    if (!isNonNegativeSafeInteger(bufferSize)) {
+      throw new TypeError("bufferSize must be a safe non-negative integer.");
     }
     this.queue = new Queue<T>(bufferSize);
     if (options?.debug) {
@@ -688,13 +688,44 @@ export interface SelectOptions<TDefault = never> {
   abortCtrl?: AbortController;
 }
 
-type SelectOperation<T> = Receiver<T> | [Sender<T>, T];
-type SelectDefaultResult<T> = [T, undefined];
-type SelectOperationResult<T> = [T, Receiver<T>] | [true, Sender<T>];
-type SelectResult<T, TDefault> =
+export type SelectOperation<T> = Receiver<T> | [Sender<T>, T];
+export type SelectDefaultResult<T> = [T, undefined];
+export type SelectOperationResult<T> = [T, Receiver<T>] | [true, Sender<T>];
+export type SelectResult<T, TDefault> = (
   | SelectOperationResult<T>
-  | SelectDefaultResult<TDefault>;
+  | SelectDefaultResult<TDefault>
+);
 
+export async function select(
+  ops: [],
+  options?:
+    | SelectOptions<never>
+    | Omit<SelectOptions<never>, "default">,
+): Promise<never>;
+
+export async function select<T, TDefault = never>(
+  ops: [SelectOperation<T>],
+  options?:
+    | SelectOptions<TDefault>
+    | Omit<SelectOptions<TDefault>, "default">,
+): Promise<SelectResult<T, TDefault>>;
+
+export async function select<T1, T2, TDefault = never>(
+  ops: [SelectOperation<T1>, SelectOperation<T2>],
+  options?:
+    | SelectOptions<TDefault>
+    | Omit<SelectOptions<TDefault>, "default">,
+): Promise<
+  | SelectOperationResult<T1>
+  | SelectOperationResult<T2>
+  | SelectDefaultResult<TDefault>
+>;
+export async function select<T, TDefault = never>(
+  ops: Exclude<SelectOperation<T>[], []>,
+  options?:
+    | SelectOptions<TDefault>
+    | Omit<SelectOptions<TDefault>, "default">,
+): Promise<SelectResult<T, TDefault>>;
 /**
  * `select` takes a list of channel operations, and completes **at-most** one of
  * them (the first operation that is ready).
