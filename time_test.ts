@@ -11,7 +11,7 @@ Deno.test("Timer", async () => {
     const end = new Date();
     if (!res[1]) fail("unreachable");
     const val = res[0];
-    assertNumberBetween(end.getTime() - val.getTime(), 0, 10);
+    assertNumberBetween(end.getTime() - val.getTime(), 0, 11);
     assertNumberBetween(
       val.getTime() - start.getTime(),
       duration,

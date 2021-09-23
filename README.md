@@ -79,8 +79,8 @@ function produce(num: number) {
       await time.timeout(100).receive(); // Do some work...
       await ch.send(i);
     }
-    ch.close();
-  })();
+  })().catch((err) => console.error(err))
+    .finally(() => ch.close());
 
   return ch;
 }
