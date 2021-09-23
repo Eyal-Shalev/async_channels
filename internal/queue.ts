@@ -1,8 +1,10 @@
+import { isNonNegativeSafeInteger } from "./utils.ts";
+
 export class Queue<T> {
   protected queue: T[] = [];
 
   constructor(readonly capacity: number) {
-    if (capacity < 0 || !Number.isSafeInteger(capacity)) {
+    if (!isNonNegativeSafeInteger(capacity)) {
       throw new RangeError(
         "queue capacity must be a non-negative safe integer",
       );
