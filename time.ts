@@ -177,6 +177,19 @@ export class Timer {
 /**
  * `timeout` creates a channel that will close after `duration` milliseconds.
  *
+ * @example
+ * ```typescript
+ * import { Channel, select, time } from "./mod.ts"
+ *
+ * async function foo<T>(ch: Channel<T>): Promise<T> {
+ *   const res = await select([
+ *     ch,
+ *     time.timeout(10 * time.Duration.Second),
+ *   ]);
+ *   if (res[1] !== ch) throw new Error("foo timed out");
+ *   return res[0];
+ * }
+ * ```
  * @param {number} duration A safe and non-negative integer.
  * @returns {Receiver<void>}
  */
@@ -188,4 +201,50 @@ export const timeout = (duration: number): Receiver<void> => {
   const c = new Channel<void>(0);
   setTimeout(() => c.close(), duration);
   return c;
+};
+
+/**
+ * `after` waits for the duration to elapse and then sends the current time on the returned channel.
+ * It is equivalent to `(new Timer(d)).c`.
+ * If efficiency is a concern, use `new Timer()` instead and call `Timer.stop` if the timer is no longer needed.
+ *
+ * @example
+ * ```typescript
+ * import { Channel, select, time } from "./mod.ts"
+ *
+ * async function foo<T>(ch: Channel<T>): Promise<T> {
+ *   const res = await select([
+ *     ch,
+ *     time.after(10 * time.Duration.Second),
+ *   ]);
+ *   if (res[1] !== ch) throw new Error(`foo timed out at: ${res[0]}`);
+ *   return res[0];
+ * }
+ * ```
+ * @param {number} duration A non-negative safe integer.
+ * @returns {Receiver<Date>}
+ */
+export const after = (duration: number): Receiver<Date> => {
+  return (new Timer(duration)).c;
+};
+
+/**
+ * `tick` is a convenience wrapper for `new Ticker(d)` providing access to the ticking channel only.
+ * While `tick` is useful for clients that have no need to shut down the `Ticker`, be aware that
+ * without a way to shut it down the underlying Ticker cannot be recovered by the garbage collector; it "leaks".
+ *
+ * @example
+ * ```typescript
+ * import { time } from "./mod.ts";
+ *
+ * for await (const cur of time.tick(5 * time.Duration.Second)) {
+ *   console.log(`current time: ${cur}`)
+ * }
+ * ```
+ *
+ * @param {number} duration A positive safe integer.
+ * @returns {Receiver<Date>}
+ */
+export const tick = (duration: number): Receiver<Date> => {
+  return (new Ticker(duration)).c;
 };

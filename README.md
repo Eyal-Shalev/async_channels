@@ -69,20 +69,14 @@ const ch = new Channel<unknown>();
 ## Example
 
 ```typescript
-import { Channel } from "https://deno.land/x/async_channels/mod.ts";
-
-const sleep = (duration: number) => {
-  return new Promise<void>((res) => {
-    setTimeout(() => res(), duration);
-  });
-};
+import { Channel, time } from "https://deno.land/x/async_channels/mod.ts";
 
 function produce(num: number) {
   const ch = new Channel(0);
 
   (async () => {
     for (let i = 0; i < num; i++) {
-      await sleep(100); // Do some work...
+      await time.timeout(100).receive(); // Do some work...
       await ch.send(i);
     }
     ch.close();
@@ -91,7 +85,7 @@ function produce(num: number) {
   return ch;
 }
 
-sleep(300).then(() => console.log("boo"));
+time.timeout(300).receive().then(() => console.log("boo"));
 
 for await (const product of produce(4)) {
   console.log({ product });

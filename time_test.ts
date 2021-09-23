@@ -1,4 +1,4 @@
-import { Ticker, timeout, Timer } from "./time.ts";
+import { after, tick, Ticker, timeout, Timer } from "./time.ts";
 import { assert, fail } from "deno/testing/asserts.ts";
 import { assertNumberBetween } from "./internal/test_utils.ts";
 import { select } from "./channel.ts";
@@ -28,6 +28,18 @@ Deno.test("timeout", async () => {
   assertNumberBetween(end.getTime() - start.getTime(), duration, duration + 10);
 });
 
+Deno.test("after", async () => {
+  const duration = 50;
+  const start = new Date();
+  const res = await after(duration).receive();
+  assert(res[1], "channel should be open");
+  assertNumberBetween(
+    res[0].getTime() - start.getTime(),
+    duration,
+    duration + 10,
+  );
+});
+
 Deno.test("Ticker", async () => {
   const expected = [50, 100, 150, 200];
   const start = new Date();
@@ -40,17 +52,36 @@ Deno.test("Ticker", async () => {
       case done:
         break loop;
       case ticker.c: {
-        const cur = new Date();
+        const cur = res[0];
         const expectedInterval = expected.shift();
         assert(expectedInterval !== undefined, "expected more intervals");
         assertNumberBetween(
           cur.getTime() - start.getTime(),
           expectedInterval,
-          expectedInterval + 15,
+          expectedInterval + 10,
         );
       }
     }
   }
   ticker.stop();
   assert(expected.length === 0);
+});
+
+Deno.test({
+  name: "tick",
+  // This test is expected to leak ops because there is no way to stop `tick`.
+  sanitizeOps: false,
+  fn: async () => {
+    const expected = [50, 100, 150, 200];
+    const start = new Date();
+    for await (const cur of tick(50)) {
+      const expectedInterval = expected.shift();
+      if (expectedInterval === undefined) return;
+      assertNumberBetween(
+        cur.getTime() - start.getTime(),
+        expectedInterval,
+        expectedInterval + 10,
+      );
+    }
+  },
 });
