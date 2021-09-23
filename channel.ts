@@ -10,6 +10,7 @@ import {
 } from "./internal/state-machine.ts";
 import {
   isNonNegativeSafeInteger,
+  isPositiveSafeInteger,
   makeAbortCtrl,
   recordWithDefaults,
 } from "./internal/utils.ts";
@@ -57,12 +58,6 @@ export interface ChannelOptions {
 
 /**
  * Options for pipe operations.
- *
- * @see Channel.map
- * @see Channel.flatMap
- * @see Channel.foreach
- * @see Channel.filter
- * @see Channel.reduce
  */
 export interface ChannelPipeOptions extends ChannelOptions {
   /**
@@ -73,7 +68,66 @@ export interface ChannelPipeOptions extends ChannelOptions {
   signal?: AbortSignal;
 }
 
-export interface Closer {
+export type ChannelDuplicateSendMode =
+  | "WaitForAll"
+  | "WaitForOne"
+  | "ContinueImmediately";
+
+export interface ChannelDuplicateOptions extends ChannelPipeOptions {
+  sendMode: ChannelDuplicateSendMode;
+}
+
+export type Closer = Pick<Channel<unknown>, "close">;
+
+/**
+ * @template T The type of value that can be sent.
+ */
+export type Sender<T> = Pick<Channel<T>, "send">;
+
+/**
+ * @template T The type of value that can be received.
+ */
+export type Receiver<T> = Omit<Channel<T>, "send">;
+
+/**
+ * @template T The type of value that can be sent to or received by this channel.
+ */
+export class Channel<T> implements AsyncIterable<T> {
+  protected currentVal?: T;
+  protected current: State = Idle;
+  protected transitionEventTarget = new EventTarget();
+  protected stateEventTarget = new EventTarget();
+  protected readonly queue: Queue<T>;
+
+  /**
+   * Constructs a new Channel with an optional buffer.
+   *
+   * @param {number} [bufferSize=0] A safe and positive integer representing the channel buffer size.
+   *   A `bufferSize` of `0` indicates a channel without any buffer.
+   * @param {ChannelOptions} [options]
+   */
+  constructor(
+    bufferSize = 0,
+    protected readonly options?: ChannelOptions,
+  ) {
+    if (!isNonNegativeSafeInteger(bufferSize)) {
+      throw new TypeError("bufferSize must be a safe non-negative integer.");
+    }
+    this.queue = new Queue<T>(bufferSize);
+    if (options?.debug) {
+      const reporter = (ev: Event) => {
+        this.debug(ev.type, { val: (ev as ValEvent<T>).val });
+      };
+      Object.values(Transition).forEach((t) => {
+        this.transitionEventTarget.addEventListener(eventType(t), reporter);
+      });
+
+      [Idle, ReceiveStuck, SendStuck, WaitingForAck].forEach((state) => {
+        this.stateEventTarget.addEventListener(eventType(state), reporter);
+      });
+    }
+  }
+
   /**
    * Closes the channel.
    *
@@ -84,47 +138,10 @@ export interface Closer {
    * Receiving a message from a closed channel will resolve the promise immediately.
    * See `Channel.receive` for more information.
    */
-  close(): void;
-}
+  public close() {
+    this.updateState(Transition.CLOSE);
+  }
 
-/**
- * @template T The type of value that can be sent.
- */
-export interface Sender<T> {
-  /**
-   * Sends a value on the channel, and returns a promise that will be resolved when a the value is received (see
-   * `Channel.receive`), or rejected if a provided `AbortController` is aborted.
-   *
-   * If the channel is closed, then the promise will be rejected with an `InvalidTransitionError`.
-   *
-   * ```ts
-   * import {Channel, InvalidTransitionError} from "./channel.ts"
-   *
-   * const ch = new Channel()
-   * ch.close();
-   * try {
-   *   await ch.send("should fail")
-   *   console.assert(false, "unreachable")
-   * } catch (e) {
-   *   console.assert(e instanceof InvalidTransitionError)
-   * }
-   * ```
-   *
-   * @param {T} val
-   *   The value to pass to the channel.
-   * @param {AbortController} [abortCtrl]
-   *   When provided `send` will `abort` the controller after `val` is successfully received.
-   *   But if the controller is aborted before that, the promise returned by `send` will be rejected.
-   * @returns {Promise<void>}
-   *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
-   */
-  send(val: T, abortCtrl?: AbortController): Promise<void>;
-}
-
-/**
- * @template T The type of value that can be received.
- */
-export interface Receiver<T> extends AsyncIterable<T> {
   /**
    * Receive returns a promise that will be resolved with `[T, true]` when a value is available, or rejected if a
    * provided `AbortController` is aborted
@@ -174,146 +191,6 @@ export interface Receiver<T> extends AsyncIterable<T> {
    * @returns {Promise<[T, true] | [undefined, false]>}
    *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
    */
-  receive(abortCtrl?: AbortController): Promise<[T, true] | [undefined, false]>;
-
-  /**
-   * Creates an `AsyncGenerator` that yields all values sent to this channel,
-   * and returns when the channel closes.
-   */
-  [Symbol.asyncIterator](): AsyncGenerator<T, void, void>;
-
-  /**
-   * map returns a receiver channel that contains the results of applying `fn`
-   * to each value of `this` channel.
-   *
-   * The receiver channel will close, when the original channel closes (or if
-   * the provided signal is triggered).
-   *
-   * @template TOut
-   * @param {(val: T) => TOut} fn
-   * @return {Receiver<TOut>}
-   */
-  map<TOut>(
-    fn: (val: T) => TOut | Promise<TOut>,
-    bufferSize?: number,
-    pipeOpts?: ChannelPipeOptions,
-  ): Receiver<TOut>;
-
-  /**
-   * flatMap returns a receiver channel that contains the flattened (1 level)
-   * results of applying `fn` to each value of `this` channel.
-   *
-   * The receiver channel will close, when the original channel closes (or if
-   * the provided signal is triggered).
-   *
-   * @template TOut
-   * @param {(val: T) => Iterable<TOut> | AsyncIterable<TOut>} fn
-   * @param {number} [bufferSize]
-   * @param {ChannelPipeOptions} [options]
-   */
-  flatMap<TOut>(
-    fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
-    bufferSize?: number,
-    pipeOpts?: ChannelPipeOptions,
-  ): Receiver<TOut>;
-
-  /**
-   * flat returns a receiver channel that contains the flattened (1 level)
-   * values of each value of `this` channel.
-   *
-   * The receiver channel will close, when the original channel closes (or if
-   * the provided signal is triggered).
-   *
-   * @param {number} [bufferSize]
-   * @param {ChannelPipeOptions} [options]
-   */
-  flat<K>(
-    this: Channel<Iterable<K> | AsyncIterable<K>>,
-    bufferSize?: number,
-    pipeOpts?: ChannelPipeOptions,
-  ): Receiver<K>;
-
-  /**
-   * forEach applies `fn` to each value in `this` channel, and returns a channel
-   * that will close after `this` channel closes (or if
-   * the provided signal is triggered).
-   *
-   * @param {(val: T) => void} fn
-   * @return {Receiver<void>}
-   */
-  forEach(
-    fn: (val: T) => void | Promise<void>,
-    bufferSize?: number,
-    pipeOpts?: ChannelPipeOptions,
-  ): Receiver<void>;
-
-  filter(
-    fn: (val: T) => boolean | Promise<boolean>,
-    bufferSize?: number,
-    pipeOpts?: ChannelPipeOptions,
-  ): Receiver<T>;
-
-  reduce(
-    fn: (prev: T, current: T) => T | Promise<T>,
-    bufferSize?: number,
-    pipeOpts?: ChannelPipeOptions,
-  ): Receiver<T>;
-
-  groupBy(
-    fn: (val: T) => string | Promise<string>,
-    bufferSize?: number,
-    pipeOpts?: ChannelPipeOptions,
-  ): Record<string, Receiver<T>>;
-}
-
-export type SendCloser<T> = Sender<T> & Closer;
-export type ReceiveClose<T> = Receiver<T> & Closer;
-export type SendReceiver<T> = Sender<T> & Receiver<T>;
-
-/**
- * @template T The type of value held by this channel.
- */
-export class Channel<T>
-  implements Sender<T>, Receiver<T>, Closer, AsyncIterable<T> {
-  protected currentVal?: T;
-  protected current: State = Idle;
-  protected transitionEventTarget = new EventTarget();
-  protected stateEventTarget = new EventTarget();
-  protected readonly queue: Queue<T>;
-
-  /**
-   * Constructs a new Channel with an optional buffer.
-   *
-   * @param {number} [bufferSize=0] A safe and positive integer representing the channel buffer size.
-   *   A `bufferSize` of `0` indicates a channel without any buffer.
-   * @param {ChannelOptions} [options]
-   */
-  constructor(
-    bufferSize = 0,
-    protected readonly options?: ChannelOptions,
-  ) {
-    if (!isNonNegativeSafeInteger(bufferSize)) {
-      throw new TypeError("bufferSize must be a safe non-negative integer.");
-    }
-    this.queue = new Queue<T>(bufferSize);
-    if (options?.debug) {
-      const reporter = (ev: Event) => {
-        this.debug(ev.type, { val: (ev as ValEvent<T>).val });
-      };
-      Object.values(Transition).forEach((t) => {
-        this.transitionEventTarget.addEventListener(eventType(t), reporter);
-      });
-
-      [Idle, ReceiveStuck, SendStuck, WaitingForAck].forEach((state) => {
-        this.stateEventTarget.addEventListener(eventType(state), reporter);
-      });
-    }
-  }
-
-  public close() {
-    this.updateState(Transition.CLOSE);
-  }
-
   public async receive(
     abortCtrl?: AbortController,
   ): Promise<[T, true] | [undefined, false]> {
@@ -373,6 +250,33 @@ export class Channel<T>
     return [valToReturn, true];
   }
 
+  /**
+   * Sends a value on the channel, and returns a promise that will be resolved when a the value is received (see
+   * `Channel.receive`), or rejected if a provided `AbortController` is aborted.
+   *
+   * If the channel is closed, then the promise will be rejected with an `InvalidTransitionError`.
+   *
+   * ```ts
+   * import {Channel, InvalidTransitionError} from "./channel.ts"
+   *
+   * const ch = new Channel()
+   * ch.close();
+   * try {
+   *   await ch.send("should fail")
+   *   console.assert(false, "unreachable")
+   * } catch (e) {
+   *   console.assert(e instanceof InvalidTransitionError)
+   * }
+   * ```
+   *
+   * @param {T} val
+   *   The value to pass to the channel.
+   * @param {AbortController} [abortCtrl]
+   *   When provided `send` will `abort` the controller after `val` is successfully received.
+   *   But if the controller is aborted before that, the promise returned by `send` will be rejected.
+   * @returns {Promise<void>}
+   *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
+   */
   public async send(val: T, abortCtrl?: AbortController): Promise<void> {
     this.debug("send(val)", { val });
     const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
@@ -432,6 +336,10 @@ export class Channel<T>
     await waitForIdlePromise;
   }
 
+  /**
+   * Creates an `AsyncGenerator` that yields all values sent to this channel,
+   * and returns when the channel closes.
+   */
   public async *[Symbol.asyncIterator](): AsyncGenerator<T, void, void> {
     while (true) {
       const res = await this.receive();
@@ -440,6 +348,17 @@ export class Channel<T>
     }
   }
 
+  /**
+   * map returns a receiver channel that contains the results of applying `fn`
+   * to each value of `this` channel.
+   *
+   * The receiver channel will close, when the original channel closes (or if
+   * the provided signal is triggered).
+   *
+   * @template TOut
+   * @param {(val: T) => TOut} fn
+   * @return {Receiver<TOut>}
+   */
   map<TOut>(
     fn: (val: T) => TOut | Promise<TOut>,
     bufferSize = this.queue.capacity,
@@ -463,6 +382,18 @@ export class Channel<T>
     return outChan;
   }
 
+  /**
+   * flatMap returns a receiver channel that contains the flattened (1 level)
+   * results of applying `fn` to each value of `this` channel.
+   *
+   * The receiver channel will close, when the original channel closes (or if
+   * the provided signal is triggered).
+   *
+   * @template TOut
+   * @param {(val: T) => Iterable<TOut> | AsyncIterable<TOut>} fn
+   * @param {number} [bufferSize]
+   * @param {ChannelPipeOptions} [options]
+   */
   flatMap<TOut>(
     fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
     bufferSize = this.queue.capacity,
@@ -488,6 +419,16 @@ export class Channel<T>
     return outChan;
   }
 
+  /**
+   * flat returns a receiver channel that contains the flattened (1 level)
+   * values of each value of `this` channel.
+   *
+   * The receiver channel will close, when the original channel closes (or if
+   * the provided signal is triggered).
+   *
+   * @param {number} [bufferSize]
+   * @param {ChannelPipeOptions} [options]
+   */
   flat<K>(
     this: Channel<Iterable<K> | AsyncIterable<K>>,
     bufferSize?: number,
@@ -515,6 +456,15 @@ export class Channel<T>
     return outChan;
   }
 
+  /**
+   * forEach applies `fn` to each value in `this` channel, and returns a channel
+   * that will contain the results.
+   * The returned channel will close after `this` channel closes (or if
+   * the provided signal is triggered).
+   *
+   * @param {(val: T) => void} fn
+   * @return {Receiver<void>}
+   */
   forEach(
     fn: (val: T) => void | Promise<void>,
     bufferSize = this.queue.capacity,
@@ -538,6 +488,17 @@ export class Channel<T>
     return outChan;
   }
 
+  /**
+   * filter applies `fn` to each value in `this` channel, and returns a new channel
+   * that will only contain value for which `fn` returned `true` (or a promise that resolves to `true`).
+   *
+   * The returned channel will close after `this` channel closes (or if the provided signal is triggered).
+   *
+   * @param {(val: T) => boolean | Promise<boolean>} fn The filter function to use.
+   * @param {number} [bufferSize]
+   * @param {ChannelPipeOptions} pipeOpts
+   * @returns {Receiver<T>}
+   */
   filter(
     fn: (val: T) => boolean | Promise<boolean>,
     bufferSize = this.queue.capacity,
@@ -596,10 +557,15 @@ export class Channel<T>
     bufferSize?: number,
     pipeOpts?: ChannelPipeOptions,
   ): Record<TKey, Receiver<T>> {
-    const { signal, ...options } = pipeOpts ?? {};
+    const { signal, debugExtra, ...options } = pipeOpts ?? {};
     const out = recordWithDefaults(
       {} as Record<TKey, Channel<T>>,
-      () => new Channel<T>(bufferSize, options),
+      (prop) => {
+        return new Channel<T>(bufferSize, {
+          ...options,
+          debugExtra: { prop, ...debugExtra },
+        });
+      },
     );
 
     (async () => {
@@ -620,6 +586,70 @@ export class Channel<T>
       });
 
     return out;
+  }
+
+  /**
+   * duplicate creates multiple channels (determined by `n`), and consumes `this` channel.
+   * The consumed values are then sent to all channels
+   * @param {number} [n=2] A safe interger larger than 1.
+   * @param {number} [bufferSize]
+   * @param {ChannelDuplicateOptions} [pipeOpts]
+   * @returns {Channel<T>[]}
+   * @throws {TypeError | RangeError}
+   */
+  duplicate(
+    n = 2,
+    bufferSize?: number,
+    pipeOpts?: ChannelDuplicateOptions,
+  ): Channel<T>[] {
+    const {
+      sendMode: sendModesTmp,
+      signal,
+      debugExtra,
+      ...options
+    } = pipeOpts ?? {};
+    const sendMode = sendModesTmp ?? "WaitForAll";
+    if (!isPositiveSafeInteger(n)) {
+      throw new TypeError(`${n} is not a safe integer larger than 1`);
+    }
+    if (n < 2) throw new RangeError(`${n} is not a safe integer larger than 1`);
+    const arrOut = [] as Channel<T>[];
+    for (let i = 0; i < n; i++) {
+      arrOut[i] = new Channel(bufferSize, {
+        ...options,
+        debugExtra: { i, ...debugExtra },
+      });
+    }
+
+    (async () => {
+      while (true) {
+        try {
+          const res = await this.receive(makeAbortCtrl(signal));
+          if (!res[1]) return;
+
+          switch (sendMode) {
+            case "WaitForAll":
+              await Promise.all(arrOut.map((ch) => ch.send(res[0])));
+              break;
+
+            case "WaitForOne":
+              await Promise.race(arrOut.map((ch) => ch.send(res[0])));
+              break;
+
+            case "ContinueImmediately":
+              Promise.all(arrOut.map((ch) => ch.send(res[0])))
+                .catch((err) => this.error("duplicate", n, err));
+              break;
+          }
+        } catch (e) {
+          if (e instanceof AbortedError) return;
+          throw e;
+        }
+      }
+    })().catch((err) => this.error("duplicate", n, err))
+      .finally(() => arrOut.forEach((ch) => ch.close()));
+
+    return arrOut;
   }
 
   static from<T>(
