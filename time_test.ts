@@ -1,7 +1,7 @@
 import { after, tick, Ticker, timeout, Timer } from "./time.ts";
 import { assert, fail } from "deno/testing/asserts.ts";
 import { assertNumberBetween } from "./internal/test_utils.ts";
-import { select } from "./channel.ts";
+import { select } from "./select.ts";
 
 Deno.test("Timer", async () => {
   for (const duration of [50, 100, 200]) {

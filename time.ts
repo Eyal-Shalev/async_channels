@@ -1,4 +1,5 @@
-import { Channel, ChannelOptions, Receiver, select } from "./channel.ts";
+import { Channel, ChannelOptions, Receiver } from "./channel.ts";
+import { select } from "./select.ts";
 import {
   isNonNegativeSafeInteger,
   isPositiveSafeInteger,
