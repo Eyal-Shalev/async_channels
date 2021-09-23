@@ -8,7 +8,11 @@ import {
   Transition,
   WaitingForAck,
 } from "./internal/state-machine.ts";
-import { isNonNegativeSafeInteger } from "./internal/utils.ts";
+import {
+  isNonNegativeSafeInteger,
+  makeAbortCtrl,
+  recordWithDefaults,
+} from "./internal/utils.ts";
 
 export { InvalidTransitionError } from "./internal/state-machine.ts";
 
@@ -192,7 +196,7 @@ export interface Receiver<T> extends AsyncIterable<T> {
   map<TOut>(
     fn: (val: T) => TOut | Promise<TOut>,
     bufferSize?: number,
-    options?: ChannelPipeOptions,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<TOut>;
 
   /**
@@ -210,7 +214,7 @@ export interface Receiver<T> extends AsyncIterable<T> {
   flatMap<TOut>(
     fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
     bufferSize?: number,
-    options?: ChannelPipeOptions,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<TOut>;
 
   /**
@@ -226,7 +230,7 @@ export interface Receiver<T> extends AsyncIterable<T> {
   flat<K>(
     this: Channel<Iterable<K> | AsyncIterable<K>>,
     bufferSize?: number,
-    options?: ChannelPipeOptions,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<K>;
 
   /**
@@ -240,20 +244,26 @@ export interface Receiver<T> extends AsyncIterable<T> {
   forEach(
     fn: (val: T) => void | Promise<void>,
     bufferSize?: number,
-    options?: ChannelPipeOptions,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<void>;
 
   filter(
     fn: (val: T) => boolean | Promise<boolean>,
     bufferSize?: number,
-    options?: ChannelPipeOptions,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<T>;
 
   reduce(
     fn: (prev: T, current: T) => T | Promise<T>,
     bufferSize?: number,
-    options?: ChannelPipeOptions,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<T>;
+
+  groupBy(
+    fn: (val: T) => string | Promise<string>,
+    bufferSize?: number,
+    pipeOpts?: ChannelPipeOptions,
+  ): Record<string, Receiver<T>>;
 }
 
 export type SendCloser<T> = Sender<T> & Closer;
@@ -433,15 +443,14 @@ export class Channel<T>
   map<TOut>(
     fn: (val: T) => TOut | Promise<TOut>,
     bufferSize = this.queue.capacity,
-    options: ChannelPipeOptions | undefined = this.options,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<TOut> {
+    const { signal, ...options } = pipeOpts ?? {};
     const outChan = new Channel<TOut>(bufferSize, options);
     (async () => {
       while (true) {
-        const ctrl = new AbortController();
-        options?.signal?.addEventListener("abort", () => ctrl.abort());
         try {
-          const res = await this.receive(ctrl);
+          const res = await this.receive(makeAbortCtrl(signal));
           if (!res[1]) return;
           await outChan.send(await fn(res[0]));
         } catch (e) {
@@ -457,15 +466,14 @@ export class Channel<T>
   flatMap<TOut>(
     fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
     bufferSize = this.queue.capacity,
-    options: ChannelPipeOptions | undefined = this.options,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<TOut> {
+    const { signal, ...options } = pipeOpts ?? {};
     const outChan = new Channel<TOut>(bufferSize, options);
     (async () => {
       while (true) {
-        const ctrl = new AbortController();
-        options?.signal?.addEventListener("abort", () => ctrl.abort());
         try {
-          const res = await this.receive(ctrl);
+          const res = await this.receive(makeAbortCtrl(signal));
           if (!res[1]) return;
           for await (const item of await fn(res[0])) {
             await outChan.send(item);
@@ -483,15 +491,14 @@ export class Channel<T>
   flat<K>(
     this: Channel<Iterable<K> | AsyncIterable<K>>,
     bufferSize?: number,
-    options: ChannelPipeOptions | undefined = this.options,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<K> {
+    const { signal, ...options } = pipeOpts ?? {};
     const outChan = new Channel<K>(bufferSize, options);
     (async () => {
       while (true) {
-        const ctrl = new AbortController();
-        options?.signal?.addEventListener("abort", () => ctrl.abort());
         try {
-          const res = await this.receive();
+          const res = await this.receive(makeAbortCtrl(signal));
           if (!res[1]) return;
 
           for await (const item of res[0]) {
@@ -511,15 +518,14 @@ export class Channel<T>
   forEach(
     fn: (val: T) => void | Promise<void>,
     bufferSize = this.queue.capacity,
-    options: ChannelPipeOptions | undefined = this.options,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<void> {
+    const { signal, ...options } = pipeOpts ?? {};
     const outChan = new Channel<void>(bufferSize, options);
     (async () => {
       while (true) {
-        const ctrl = new AbortController();
-        options?.signal?.addEventListener("abort", () => ctrl.abort());
         try {
-          const res = await this.receive(ctrl);
+          const res = await this.receive(makeAbortCtrl(signal));
           if (!res[1]) return;
           await fn(res[0]);
         } catch (e) {
@@ -527,7 +533,7 @@ export class Channel<T>
           throw e;
         }
       }
-    })().catch((err) => this.error("map", fn, err))
+    })().catch((err) => this.error("forEach", fn, err))
       .finally(() => outChan.close());
     return outChan;
   }
@@ -535,15 +541,14 @@ export class Channel<T>
   filter(
     fn: (val: T) => boolean | Promise<boolean>,
     bufferSize = this.queue.capacity,
-    options: ChannelPipeOptions | undefined = this.options,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<T> {
+    const { signal, ...options } = pipeOpts ?? {};
     const outChan = new Channel<T>(bufferSize, options);
     (async () => {
       while (true) {
-        const ctrl = new AbortController();
-        options?.signal?.addEventListener("abort", () => ctrl.abort());
         try {
-          const res = await this.receive(ctrl);
+          const res = await this.receive(makeAbortCtrl(signal));
           if (!res[1]) return;
           if (!(await fn(res[0]))) continue;
           await outChan.send(res[0]);
@@ -552,7 +557,7 @@ export class Channel<T>
           throw e;
         }
       }
-    })().catch((err) => this.error("map", fn, err))
+    })().catch((err) => this.error("filter", fn, err))
       .finally(() => outChan.close());
     return outChan;
   }
@@ -560,27 +565,21 @@ export class Channel<T>
   reduce(
     fn: (prev: T, current: T) => T | Promise<T>,
     bufferSize = this.queue.capacity,
-    options: ChannelPipeOptions | undefined = this.options,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<T> {
+    const { signal, ...options } = pipeOpts ?? {};
     const outChan = new Channel<T>(bufferSize, options);
     this.debug("reduce(fn)", { fn });
 
     (async () => {
-      const makeAbortCtrl = () => {
-        if (!options?.signal) return;
-        const ctrl = new AbortController();
-        options.signal.addEventListener("abort", () => ctrl.abort());
-        return ctrl;
-      };
-
       let prev: T;
 
-      const res = await this.receive(makeAbortCtrl());
+      const res = await this.receive(makeAbortCtrl(signal));
       if (!res[1]) return;
       prev = res[0];
 
       while (true) {
-        const res = await this.receive(makeAbortCtrl());
+        const res = await this.receive(makeAbortCtrl(signal));
         if (!res[1]) {
           return await outChan.send(prev);
         }
@@ -590,6 +589,37 @@ export class Channel<T>
       .finally(() => outChan.close());
 
     return outChan;
+  }
+
+  groupBy<TKey extends (string | symbol)>(
+    fn: (val: T) => TKey | Promise<TKey>,
+    bufferSize?: number,
+    pipeOpts?: ChannelPipeOptions,
+  ): Record<TKey, Receiver<T>> {
+    const { signal, ...options } = pipeOpts ?? {};
+    const out = recordWithDefaults(
+      {} as Record<TKey, Channel<T>>,
+      () => new Channel<T>(bufferSize, options),
+    );
+
+    (async () => {
+      while (true) {
+        try {
+          const res = await this.receive(makeAbortCtrl(signal));
+          if (!res[1]) return;
+          const key = await fn(res[0]);
+          await out[key].send(res[0]);
+        } catch (e) {
+          if (e instanceof AbortedError) return;
+          throw e;
+        }
+      }
+    })().catch((err) => this.error("groupBy", fn, err))
+      .finally(() => {
+        Object.values<Channel<T>>(out).forEach((ch) => ch.close());
+      });
+
+    return out;
   }
 
   static from<T>(
@@ -603,7 +633,8 @@ export class Channel<T>
       for await (const item of input) {
         await outChan.send(item);
       }
-    })();
+    })().catch((err) => outChan.error("Channel.from", err))
+      .finally(() => outChan.close());
 
     return outChan;
   }
@@ -645,7 +676,7 @@ export class Channel<T>
     console.error(...args, {
       currentState: this.current.name,
       currentVal: this.currentVal,
-      ...(this.options?.debugExtra || {}),
+      ...(this.options?.debugExtra ?? {}),
     });
   }
 
@@ -654,7 +685,7 @@ export class Channel<T>
       console.debug(...args, {
         currentState: this.current.name,
         currentVal: this.currentVal,
-        ...(this.options?.debugExtra || {}),
+        ...(this.options?.debugExtra ?? {}),
       });
     }
   }

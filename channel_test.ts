@@ -1,7 +1,7 @@
 import { sleep } from "./internal/utils.ts";
 import { Channel } from "./channel.ts";
 import { InvalidTransitionError } from "./internal/state-machine.ts";
-import { assertEquals, assertThrowsAsync } from "deno/testing/asserts.ts";
+import { assertEquals, assertThrowsAsync, fail } from "deno/testing/asserts.ts";
 
 Deno.test("no-buffer receive -> send", async () => {
   const chan = new Channel<string>(0);
@@ -135,8 +135,8 @@ Deno.test("channel as an async iterator", async () => {
       await sleep(20);
       await chan.send(x);
     }
-    chan.close();
-  })();
+  })().catch((err) => fail(err))
+    .finally(() => chan.close());
 
   const p = sleep(30).then(() => out.push("boo"));
 
@@ -182,6 +182,29 @@ Deno.test("flat", async () => {
 
   await p;
   assertEquals(expected.length, 0, "expected stack isn't empty");
+});
+
+Deno.test("groupBy", async () => {
+  await 0;
+  const ch = new Channel<number>(0);
+  const { even: evenCh, odd: oddCh } = ch.groupBy((x) =>
+    x % 2 === 0 ? "even" : "odd"
+  );
+  const expected = Object.freeze({
+    evens: [2, 4, 6],
+    odds: [1, 3, 5],
+  });
+
+  const sendP = Promise.all(
+    [1, 2, 3, 4, 5, 6].map((x) => ch.send(x)),
+  ).finally(() => ch.close());
+
+  const receiveP = Promise.all([
+    evenCh.forEach((n) => assertEquals(n, expected.evens.shift())),
+    oddCh.forEach((n) => assertEquals(n, expected.odds.shift())),
+  ]);
+
+  await Promise.all([sendP, receiveP]);
 });
 
 Deno.test("pipeline", async () => {

@@ -121,7 +121,8 @@ function subscribe(
     for await (const msg of sub) {
       await ch.send(msg);
     }
-  })();
+  })().catch((err) => console.error("caught error in subscription loop", err))
+    .finally(() => ch.close());
 
   return unsubscribe;
 }
