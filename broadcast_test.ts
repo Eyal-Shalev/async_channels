@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.106.0/testing/asserts.ts";
+import { assertEquals } from "deno/testing/asserts.ts";
 import { BroadcastChannel } from "./broadcast.ts";
 
 Deno.test("broadcast", async () => {

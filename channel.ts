@@ -1,3 +1,4 @@
+import { BroadcastChannelOptions } from "./broadcast.ts";
 import { Queue } from "./internal/queue.ts";
 import {
   Closed,
@@ -9,11 +10,23 @@ import {
   WaitingForAck,
 } from "./internal/state-machine.ts";
 import {
+  ignoreAbortedError,
   isNonNegativeSafeInteger,
-  isPositiveSafeInteger,
   makeAbortCtrl,
-  recordWithDefaults,
 } from "./internal/utils.ts";
+import {
+  ChannelDuplicateOptions,
+  ChannelPipeOptions,
+  duplicate,
+  filter,
+  flat,
+  flatMap,
+  forEach,
+  groupBy,
+  map,
+  reduce,
+} from "./pipe.ts";
+import { subscribe } from "./subscribe.ts";
 
 export { InvalidTransitionError } from "./internal/state-machine.ts";
 
@@ -56,38 +69,21 @@ export interface ChannelOptions {
   debugExtra?: Record<string, unknown>;
 }
 
-/**
- * Options for pipe operations.
- */
-export interface ChannelPipeOptions extends ChannelOptions {
-  /**
-   * If provided, the pipe operation will halt when the signal is triggered.
-   *
-   * @type {AbortSignal}
-   */
-  signal?: AbortSignal;
-}
-
-export type ChannelDuplicateSendMode =
-  | "WaitForAll"
-  | "WaitForOne"
-  | "ContinueImmediately";
-
-export interface ChannelDuplicateOptions extends ChannelPipeOptions {
-  sendMode: ChannelDuplicateSendMode;
-}
-
-export type Closer = Pick<Channel<unknown>, "close">;
+export type Closer = Pick<Channel<unknown>, "close" | "with">;
 
 /**
  * @template T The type of value that can be sent.
  */
-export type Sender<T> = Pick<Channel<T>, "send">;
+export type Sender<T> = Pick<Channel<T>, "send" | "with">;
 
 /**
  * @template T The type of value that can be received.
  */
 export type Receiver<T> = Omit<Channel<T>, "send">;
+
+export interface ClosedReceiver extends Receiver<unknown> {
+  receive(abortCtrl?: AbortController): Promise<[undefined, false]>;
+}
 
 /**
  * @template T The type of value that can be sent to or received by this channel.
@@ -107,7 +103,7 @@ export class Channel<T> implements AsyncIterable<T> {
    * @param {ChannelOptions} [options]
    */
   constructor(
-    bufferSize = 0,
+    readonly bufferSize = 0,
     protected readonly options?: ChannelOptions,
   ) {
     if (!isNonNegativeSafeInteger(bufferSize)) {
@@ -349,6 +345,27 @@ export class Channel<T> implements AsyncIterable<T> {
   }
 
   /**
+   * Applies `fn` on `this` and returns the result.
+   *
+   * @example
+   * ```ts
+   * import { Channel } from "./channel.ts";
+   * import { map } from "./pipe.ts";
+   * const srcCh = new Channel<number>(1);
+   * const resCh = srcCh.with(map(n => n * 2));
+   * await srcCh.send(5);
+   * srcCh.close();
+   * console.assert(await resCh.receive() === [10, true]);
+   * ```
+   *
+   * @param {(ch: typeof this) => TOut} fn
+   * @returns {TOut}
+   */
+  with<TOut>(fn: (t: typeof this) => TOut): TOut {
+    return fn(this);
+  }
+
+  /**
    * map returns a receiver channel that contains the results of applying `fn`
    * to each value of `this` channel.
    *
@@ -361,25 +378,9 @@ export class Channel<T> implements AsyncIterable<T> {
    */
   map<TOut>(
     fn: (val: T) => TOut | Promise<TOut>,
-    bufferSize = this.queue.capacity,
     pipeOpts?: ChannelPipeOptions,
   ): Receiver<TOut> {
-    const { signal, ...options } = pipeOpts ?? {};
-    const outChan = new Channel<TOut>(bufferSize, options);
-    (async () => {
-      while (true) {
-        try {
-          const res = await this.receive(makeAbortCtrl(signal));
-          if (!res[1]) return;
-          await outChan.send(await fn(res[0]));
-        } catch (e) {
-          if (e instanceof AbortedError) return;
-          throw e;
-        }
-      }
-    })().catch((err) => this.error("map", fn, err))
-      .finally(() => outChan.close());
-    return outChan;
+    return this.with(map(fn, pipeOpts));
   }
 
   /**
@@ -396,27 +397,9 @@ export class Channel<T> implements AsyncIterable<T> {
    */
   flatMap<TOut>(
     fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
-    bufferSize = this.queue.capacity,
     pipeOpts?: ChannelPipeOptions,
   ): Receiver<TOut> {
-    const { signal, ...options } = pipeOpts ?? {};
-    const outChan = new Channel<TOut>(bufferSize, options);
-    (async () => {
-      while (true) {
-        try {
-          const res = await this.receive(makeAbortCtrl(signal));
-          if (!res[1]) return;
-          for await (const item of await fn(res[0])) {
-            await outChan.send(item);
-          }
-        } catch (e) {
-          if (e instanceof AbortedError) return;
-          throw e;
-        }
-      }
-    })().catch((err) => this.error("flatMap", fn, err))
-      .finally(() => outChan.close());
-    return outChan;
+    return this.with(flatMap(fn, pipeOpts));
   }
 
   /**
@@ -431,29 +414,9 @@ export class Channel<T> implements AsyncIterable<T> {
    */
   flat<K>(
     this: Channel<Iterable<K> | AsyncIterable<K>>,
-    bufferSize?: number,
     pipeOpts?: ChannelPipeOptions,
   ): Receiver<K> {
-    const { signal, ...options } = pipeOpts ?? {};
-    const outChan = new Channel<K>(bufferSize, options);
-    (async () => {
-      while (true) {
-        try {
-          const res = await this.receive(makeAbortCtrl(signal));
-          if (!res[1]) return;
-
-          for await (const item of res[0]) {
-            await outChan.send(item);
-          }
-        } catch (e) {
-          if (e instanceof AbortedError) return;
-          throw e;
-        }
-      }
-    })().catch((err) => this.error("flat", err))
-      .finally(() => outChan.close());
-
-    return outChan;
+    return this.with(flat(pipeOpts));
   }
 
   /**
@@ -466,26 +429,10 @@ export class Channel<T> implements AsyncIterable<T> {
    * @return {Receiver<void>}
    */
   forEach(
-    fn: (val: T) => void | Promise<void>,
-    bufferSize = this.queue.capacity,
+    fn: (val: T) => unknown | Promise<unknown>,
     pipeOpts?: ChannelPipeOptions,
   ): Receiver<void> {
-    const { signal, ...options } = pipeOpts ?? {};
-    const outChan = new Channel<void>(bufferSize, options);
-    (async () => {
-      while (true) {
-        try {
-          const res = await this.receive(makeAbortCtrl(signal));
-          if (!res[1]) return;
-          await fn(res[0]);
-        } catch (e) {
-          if (e instanceof AbortedError) return;
-          throw e;
-        }
-      }
-    })().catch((err) => this.error("forEach", fn, err))
-      .finally(() => outChan.close());
-    return outChan;
+    return this.with(forEach(fn, pipeOpts));
   }
 
   /**
@@ -501,91 +448,23 @@ export class Channel<T> implements AsyncIterable<T> {
    */
   filter(
     fn: (val: T) => boolean | Promise<boolean>,
-    bufferSize = this.queue.capacity,
     pipeOpts?: ChannelPipeOptions,
   ): Receiver<T> {
-    const { signal, ...options } = pipeOpts ?? {};
-    const outChan = new Channel<T>(bufferSize, options);
-    (async () => {
-      while (true) {
-        try {
-          const res = await this.receive(makeAbortCtrl(signal));
-          if (!res[1]) return;
-          if (!(await fn(res[0]))) continue;
-          await outChan.send(res[0]);
-        } catch (e) {
-          if (e instanceof AbortedError) return;
-          throw e;
-        }
-      }
-    })().catch((err) => this.error("filter", fn, err))
-      .finally(() => outChan.close());
-    return outChan;
+    return this.with(filter(fn, pipeOpts));
   }
 
   reduce(
     fn: (prev: T, current: T) => T | Promise<T>,
-    bufferSize = this.queue.capacity,
     pipeOpts?: ChannelPipeOptions,
   ): Receiver<T> {
-    const { signal, ...options } = pipeOpts ?? {};
-    const outChan = new Channel<T>(bufferSize, options);
-    this.debug("reduce(fn)", { fn });
-
-    (async () => {
-      let prev: T;
-
-      const res = await this.receive(makeAbortCtrl(signal));
-      if (!res[1]) return;
-      prev = res[0];
-
-      while (true) {
-        const res = await this.receive(makeAbortCtrl(signal));
-        if (!res[1]) {
-          return await outChan.send(prev);
-        }
-        prev = await fn(prev, res[0]);
-      }
-    })().catch((err) => this.error("reduce", fn, err))
-      .finally(() => outChan.close());
-
-    return outChan;
+    return this.with(reduce(fn, pipeOpts));
   }
 
   groupBy<TKey extends (string | symbol)>(
     fn: (val: T) => TKey | Promise<TKey>,
-    bufferSize?: number,
     pipeOpts?: ChannelPipeOptions,
   ): Record<TKey, Receiver<T>> {
-    const { signal, debugExtra, ...options } = pipeOpts ?? {};
-    const out = recordWithDefaults(
-      {} as Record<TKey, Channel<T>>,
-      (prop) => {
-        return new Channel<T>(bufferSize, {
-          ...options,
-          debugExtra: { prop, ...debugExtra },
-        });
-      },
-    );
-
-    (async () => {
-      while (true) {
-        try {
-          const res = await this.receive(makeAbortCtrl(signal));
-          if (!res[1]) return;
-          const key = await fn(res[0]);
-          await out[key].send(res[0]);
-        } catch (e) {
-          if (e instanceof AbortedError) return;
-          throw e;
-        }
-      }
-    })().catch((err) => this.error("groupBy", fn, err))
-      .finally(() => {
-        Object.values<Channel<T>>(out).forEach((ch) => ch.close());
-      });
-
-    return out;
+    return this.with(groupBy(fn, pipeOpts));
   }
 
   /**
@@ -597,73 +476,31 @@ export class Channel<T> implements AsyncIterable<T> {
    * @returns {Channel<T>[]}
    * @throws {TypeError | RangeError}
    */
-  duplicate(
-    n = 2,
-    bufferSize?: number,
-    pipeOpts?: ChannelDuplicateOptions,
-  ): Channel<T>[] {
-    const {
-      sendMode: sendModesTmp,
-      signal,
-      debugExtra,
-      ...options
-    } = pipeOpts ?? {};
-    const sendMode = sendModesTmp ?? "WaitForAll";
-    if (!isPositiveSafeInteger(n)) {
-      throw new TypeError(`${n} is not a safe integer larger than 1`);
-    }
-    if (n < 2) throw new RangeError(`${n} is not a safe integer larger than 1`);
-    const arrOut = [] as Channel<T>[];
-    for (let i = 0; i < n; i++) {
-      arrOut[i] = new Channel(bufferSize, {
-        ...options,
-        debugExtra: { i, ...debugExtra },
-      });
-    }
+  duplicate(n = 2, pipeOpts?: ChannelDuplicateOptions): Channel<T>[] {
+    return this.with(duplicate(n, pipeOpts));
+  }
 
-    (async () => {
-      while (true) {
-        try {
-          const res = await this.receive(makeAbortCtrl(signal));
-          if (!res[1]) return;
-
-          switch (sendMode) {
-            case "WaitForAll":
-              await Promise.all(arrOut.map((ch) => ch.send(res[0])));
-              break;
-
-            case "WaitForOne":
-              await Promise.race(arrOut.map((ch) => ch.send(res[0])));
-              break;
-
-            case "ContinueImmediately":
-              Promise.all(arrOut.map((ch) => ch.send(res[0])))
-                .catch((err) => this.error("duplicate", n, err));
-              break;
-          }
-        } catch (e) {
-          if (e instanceof AbortedError) return;
-          throw e;
-        }
-      }
-    })().catch((err) => this.error("duplicate", n, err))
-      .finally(() => arrOut.forEach((ch) => ch.close()));
-
-    return arrOut;
+  subscribe(
+    fn: (_: T) => string | number | symbol,
+    topics: (string | number | symbol)[],
+    options?: BroadcastChannelOptions,
+  ): Record<string | number | symbol, Receiver<T>> {
+    return this.with(subscribe(fn, topics, options));
   }
 
   static from<T>(
     input: Iterable<T> | AsyncIterable<T>,
-    bufferSize?: number,
-    options?: ChannelOptions,
+    pipeOpts?: ChannelPipeOptions,
   ): Receiver<T> {
+    const { signal, bufferSize, ...options } = pipeOpts ?? {};
     const outChan = new Channel<T>(bufferSize, options);
 
     (async () => {
       for await (const item of input) {
-        await outChan.send(item);
+        await outChan.send(item, makeAbortCtrl(signal));
       }
-    })().catch((err) => outChan.error("Channel.from", err))
+    })().catch(ignoreAbortedError)
+      .catch((err) => outChan.error("Channel.from", err))
       .finally(() => outChan.close());
 
     return outChan;
@@ -702,7 +539,7 @@ export class Channel<T> implements AsyncIterable<T> {
     });
   }
 
-  protected error(...args: unknown[]) {
+  error(...args: unknown[]) {
     console.error(...args, {
       currentState: this.current.name,
       currentVal: this.currentVal,
@@ -710,7 +547,7 @@ export class Channel<T> implements AsyncIterable<T> {
     });
   }
 
-  protected debug(...args: unknown[]) {
+  debug(...args: unknown[]) {
     if (this.options?.debug) {
       console.debug(...args, {
         currentState: this.current.name,

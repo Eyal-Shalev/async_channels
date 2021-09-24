@@ -1,55 +1,59 @@
-import { Channel, ChannelOptions, Receiver } from "./channel.ts";
+import { Channel, ClosedReceiver, Receiver } from "./channel.ts";
+import { ignoreAbortedError, makeAbortCtrl } from "./internal/utils.ts";
+import { ChannelPipeOptions } from "./pipe.ts";
 
-export type MergeOptions = ChannelOptions & { bufferSize?: number };
 export function merge(
   inChans: [],
-  options?: MergeOptions,
-): never;
-export function merge(
-  inChans: [Receiver<unknown>],
-  options?: MergeOptions,
-): never;
-export function merge<T1, T2>(
+  options?: ChannelPipeOptions,
+): ClosedReceiver;
+export function merge<T>(
+  inChans: [Receiver<T>],
+  options?: ChannelPipeOptions,
+): Receiver<T>;
+export function merge<T1 = unknown, T2 = T1>(
   inChans: [
     Receiver<T1>,
     Receiver<T2>,
   ],
-  options?: MergeOptions,
+  options?: ChannelPipeOptions,
 ): Receiver<T1 | T2>;
-export function merge<T1, T2, T3>(
+export function merge<T1 = unknown, T2 = T1, T3 = T2>(
   inChans: [
     Receiver<T1>,
     Receiver<T2>,
     Receiver<T3>,
   ],
-  options?: MergeOptions,
+  options?: ChannelPipeOptions,
 ): Receiver<T1 | T2 | T3>;
+export function merge<T>(
+  inChans: Receiver<T>[],
+  options?: ChannelPipeOptions,
+): Receiver<T>;
 /**
  * Takes a collection of source channels and returns a channel
  * which contains all values taken from them.
  *
  * @template T
  * @param {Receiver<T>[]} inChans
- * @param {MergeOptions} [options={}]
+ * @param {ChannelPipeOptions} [options={}]
  * @returns {Receiver<T>}
  */
 export function merge<T>(
   inChans: Receiver<T>[],
-  options: MergeOptions = {},
+  mergeOpts: ChannelPipeOptions = {},
 ): Receiver<T> {
-  if (inChans.length < 2) {
-    throw new TypeError("cannot merge less than 2 channels");
-  }
+  const { signal, ...options } = mergeOpts;
   const { bufferSize, ...chOpts } = options;
   const outChan = new Channel<T>(bufferSize, chOpts);
 
   Promise.all(inChans.map((inChan) =>
     (async () => {
       for await (const current of inChan) {
-        await outChan.send(current);
+        await outChan.send(current, makeAbortCtrl(signal));
       }
     })()
-  )).catch((err) => console.error("merge", err))
+  )).catch(ignoreAbortedError)
+    .catch((err) => console.error("merge", err))
     .finally(() => outChan.close());
 
   return outChan;

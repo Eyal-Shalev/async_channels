@@ -1,6 +1,9 @@
 # Async Channels
 
+[![Latest Version](https://img.shields.io/github/v/release/eyal-shalev/async_channels?sort=semver&label=Latest%20Version)](https://github.com/Eyal-Shalev/async_channels)
 [![Test](https://github.com/Eyal-Shalev/async_channels/actions/workflows/test.yml/badge.svg)](https://github.com/Eyal-Shalev/async_channels/actions/workflows/test.yml)
+[![Release](https://github.com/Eyal-Shalev/async_channels/actions/workflows/release.yml/badge.svg)](https://github.com/Eyal-Shalev/async_channels/actions/workflows/release.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 Inspired by `Go` & `Clojure` Channels, `async_channels` provides channels as an
 asynchronous communication method between asynchronous functions.
@@ -72,17 +75,12 @@ const ch = new Channel<unknown>();
 import { Channel, time } from "https://deno.land/x/async_channels/mod.ts";
 
 function produce(num: number) {
-  const ch = new Channel(0);
-
-  (async () => {
+  return Channel.from((async function* () {
     for (let i = 0; i < num; i++) {
       await time.timeout(100).receive(); // Do some work...
-      await ch.send(i);
+      yield i;
     }
-  })().catch((err) => console.error(err))
-    .finally(() => ch.close());
-
-  return ch;
+  })());
 }
 
 time.timeout(300).receive().then(() => console.log("boo"));

@@ -5,13 +5,16 @@ import {
   Receiver,
   Sender,
 } from "./channel.ts";
+import { ignoreAbortedError, makeAbortCtrl } from "./internal/utils.ts";
+import { ChannelPipeOptions } from "./pipe.ts";
 import { select, SelectOperation } from "./select.ts";
 
 type SendCloser<T> = Sender<T> & Closer;
 
-export interface Subscribable<TMsg, TTopic> {
-  subscribe(topic: TTopic): [Receiver<TMsg>, () => void];
-}
+export type Subscribable<TMsg, TTopic> = Pick<
+  BroadcastChannel<TMsg, TTopic>,
+  "subscribe" | "with"
+>;
 
 type TopicFn<T> = (topic: T) => boolean;
 
@@ -24,6 +27,8 @@ export type BroadcastSendMode =
   | "WaitForOne"
   | "ReturnImmediately";
 
+export const defaultBroadcastSendMode: BroadcastSendMode = "ReturnImmediately";
+
 export function isBroadcastSendMode(x: unknown): x is BroadcastSendMode {
   return ([
     "WaitForAll",
@@ -32,16 +37,14 @@ export function isBroadcastSendMode(x: unknown): x is BroadcastSendMode {
   ] as unknown[]).includes(x);
 }
 
-interface BroadcastChannelOptions extends ChannelOptions {
-  sendMode: BroadcastSendMode;
+export interface BroadcastChannelOptions extends ChannelOptions {
+  sendMode?: BroadcastSendMode;
 }
+export type BroadcastChannelPipeOptions =
+  & BroadcastChannelOptions
+  & Omit<ChannelPipeOptions, "bufferSize">;
 
-export const DefaultBroadcastChannelOptions: BroadcastChannelOptions = {
-  sendMode: "ReturnImmediately",
-};
-
-export class BroadcastChannel<TMsg, TTopic>
-  implements Sender<TMsg>, Closer, Subscribable<TMsg, TTopic> {
+export class BroadcastChannel<TMsg, TTopic> {
   protected subscribers = new Map<TTopic | symbol, Set<SendCloser<TMsg>>>();
   protected fnSubscribers = new Map<TopicFn<TTopic>, Set<SendCloser<TMsg>>>();
   protected readonly options: BroadcastChannelOptions;
@@ -53,9 +56,32 @@ export class BroadcastChannel<TMsg, TTopic>
 
   constructor(
     protected readonly topicFn: (val: TMsg) => TTopic,
-    options = DefaultBroadcastChannelOptions,
+    options?: BroadcastChannelOptions,
   ) {
-    this.options = { ...DefaultBroadcastChannelOptions, ...options };
+    this.options = { sendMode: defaultBroadcastSendMode, ...(options ?? {}) };
+  }
+
+  with<T>(fn: (t: typeof this) => T): T {
+    return fn(this);
+  }
+
+  static from<TMsg, TTopic>(
+    input: Iterable<TMsg> | AsyncIterable<TMsg>,
+    topicFn: (val: TMsg) => TTopic,
+    pipeOpts?: BroadcastChannelPipeOptions,
+  ): Subscribable<TMsg, TTopic> {
+    const { signal, ...options } = pipeOpts ?? {};
+    const outChan = new BroadcastChannel<TMsg, TTopic>(topicFn, options);
+
+    (async () => {
+      for await (const item of input) {
+        await outChan.send(item, makeAbortCtrl(signal));
+      }
+    })().catch(ignoreAbortedError)
+      .catch((err) => outChan.error("BroadcastChannel.from", err))
+      .finally(() => outChan.close());
+
+    return outChan;
   }
 
   async send(msg: TMsg, abortCtrl?: AbortController): Promise<void> {
@@ -102,7 +128,9 @@ export class BroadcastChannel<TMsg, TTopic>
     }
   }
 
-  subscribe(topic: TTopic | TopicFn<TTopic>): [Receiver<TMsg>, () => void] {
+  subscribe(
+    topic: TTopic | TopicFn<TTopic>,
+  ): [Receiver<TMsg>, () => void] {
     if (!this.isOpen) {
       throw new TypeError("Cannot subscribe to a closed BroadcastChannel");
     }
@@ -141,5 +169,26 @@ export class BroadcastChannel<TMsg, TTopic>
         ch.close();
       });
     });
+    this.fnSubscribers.forEach((channels) => {
+      channels.forEach((ch) => {
+        ch.close();
+      });
+    });
+  }
+
+  protected error(...args: unknown[]) {
+    console.error(...args, {
+      topicFn: this.topicFn,
+      ...(this.options?.debugExtra ?? {}),
+    });
+  }
+
+  protected debug(...args: unknown[]) {
+    if (this.options?.debug) {
+      console.debug(...args, {
+        topicFn: this.topicFn,
+        ...(this.options?.debugExtra ?? {}),
+      });
+    }
   }
 }

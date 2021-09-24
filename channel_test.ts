@@ -208,7 +208,7 @@ Deno.test("groupBy", async () => {
 
 Deno.test("duplicate", async () => {
   const ch = new Channel<number>(0);
-  const [ch0, ch1] = ch.duplicate(2, undefined, { sendMode: "WaitForOne" });
+  const [ch0, ch1] = ch.duplicate(2, { sendMode: "WaitForOne" });
   const evenCh = ch0.filter((n) => n % 2 === 0);
   const oddCh = ch1.filter((n) => n % 2 === 1);
   const expected = Object.freeze({
@@ -245,4 +245,22 @@ Deno.test("pipeline", async () => {
   assertEquals(await pipeCh.receive(), [undefined, false]);
 
   await p;
+});
+
+type foo = Generator;
+
+Deno.test("Channel.from", async () => {
+  const ch = Channel.from(async function* () {
+    for (let i = 0; i < 6; i++) {
+      await sleep(100);
+      yield i;
+    }
+  }());
+
+  for (const expected of [0, 1, 2, 3, 4, 5]) {
+    const [actual] = await ch.receive();
+    assertEquals(actual, expected);
+  }
+
+  assertEquals(await ch.receive(), [undefined, false]);
 });
