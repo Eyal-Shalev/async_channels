@@ -13,7 +13,7 @@ type SendCloser<T> = Sender<T> & Closer;
 
 export type Subscribable<TMsg, TTopic> = Pick<
   BroadcastChannel<TMsg, TTopic>,
-  "subscribe" | "with"
+  "subscribe"
 >;
 
 type TopicFn<T> = (topic: T) => boolean;
@@ -44,7 +44,7 @@ export type BroadcastChannelPipeOptions =
   & BroadcastChannelOptions
   & Omit<ChannelPipeOptions, "bufferSize">;
 
-export class BroadcastChannel<TMsg, TTopic> implements Sender<TMsg>, Closer {
+export class BroadcastChannel<TMsg, TTopic> {
   protected subscribers = new Map<TTopic | symbol, Set<SendCloser<TMsg>>>();
   protected fnSubscribers = new Map<TopicFn<TTopic>, Set<SendCloser<TMsg>>>();
   protected readonly options: BroadcastChannelOptions;
