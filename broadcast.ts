@@ -1,19 +1,19 @@
 import {
   Channel,
   ChannelOptions,
-  ChannelPipeOptions,
   Closer,
   Receiver,
   Sender,
 } from "./channel.ts";
 import { ignoreAbortedError, makeAbortCtrl } from "./internal/utils.ts";
+import { ChannelPipeOptions } from "./pipe.ts";
 import { select, SelectOperation } from "./select.ts";
 
 type SendCloser<T> = Sender<T> & Closer;
 
 export type Subscribable<TMsg, TTopic> = Pick<
   BroadcastChannel<TMsg, TTopic>,
-  "subscribe"
+  "subscribe" | "with"
 >;
 
 type TopicFn<T> = (topic: T) => boolean;

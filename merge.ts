@@ -1,10 +1,6 @@
-import {
-  Channel,
-  ChannelPipeOptions,
-  ClosedReceiver,
-  Receiver,
-} from "./channel.ts";
+import { Channel, ClosedReceiver, Receiver } from "./channel.ts";
 import { ignoreAbortedError, makeAbortCtrl } from "./internal/utils.ts";
+import { ChannelPipeOptions } from "./pipe.ts";
 
 export function merge(
   inChans: [],
