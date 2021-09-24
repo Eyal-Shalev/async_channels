@@ -38,7 +38,7 @@ const glob = fs.expandGlob("**/*.ts", {
   ],
 });
 
-const moduleNames: string[] = [];
+const origModuleNames: string[] = [];
 const sources: Record<string, string> = {};
 
 for await (const file of glob) {
@@ -49,15 +49,16 @@ for await (const file of glob) {
   let tail;
   for (const cur of relJSPath.split("/").reverse()) {
     tail = tail ? `${cur}/${tail}` : cur;
-    moduleNames.push(tail);
+    origModuleNames.push(tail);
   }
 
   const absolutePath = path.join(distESMPath, relPath);
   sources[absolutePath] = await Deno.readTextFile(filePath);
 }
 
-moduleNames.push(...moduleNames.map((x) => `../${x}`));
-moduleNames.push(...moduleNames.map((x) => `../${x}`));
+const moduleNames = [...origModuleNames.map((x) => `./${x}`)];
+moduleNames.push(...origModuleNames.map((x) => `../${x}`));
+moduleNames.push(...origModuleNames.map((x) => `../../${x}`));
 
 debug({ sources, moduleNames });
 
@@ -83,7 +84,7 @@ function replaceUrls(contents: string): string {
   moduleNames.forEach((moduleName) => {
     contents = contents.replaceAll(
       path.toFileUrl(path.join(distESMPath, moduleName)).toString(),
-      `./${moduleName}`,
+      `${moduleName}`,
     );
   });
   return contents;
@@ -92,12 +93,12 @@ function replaceUrls(contents: string): string {
 function fixDeclarationFile(contents: string): string {
   moduleNames.forEach((moduleName) => {
     contents = contents.replaceAll(
-      `name="./${moduleName}.ts"`,
-      `name="./${moduleName}"`,
+      `name="${moduleName}.ts"`,
+      `name="${moduleName}"`,
     );
     contents = contents.replaceAll(
-      `from "./${moduleName}.ts"`,
-      `from "./${moduleName}.d.ts"`,
+      `from "${moduleName}.ts"`,
+      `from "${moduleName}.d.ts"`,
     );
   });
   return contents;
@@ -106,8 +107,8 @@ function fixDeclarationFile(contents: string): string {
 function fixJavaScriptFile(contents: string): string {
   moduleNames.forEach((moduleName) => {
     contents = contents.replaceAll(
-      `from "./${moduleName}.ts"`,
-      `from "./${moduleName}.js"`,
+      `from "${moduleName}.ts"`,
+      `from "${moduleName}.js"`,
     );
   });
   return contents;
@@ -115,8 +116,8 @@ function fixJavaScriptFile(contents: string): string {
 function fixMappingFile(contents: string): string {
   moduleNames.forEach((moduleName) => {
     contents = contents.replaceAll(
-      `"./${moduleName}.ts"`,
-      `"./${moduleName}.js"`,
+      `"${moduleName}.ts"`,
+      `"${moduleName}.js"`,
     );
   });
   return contents;

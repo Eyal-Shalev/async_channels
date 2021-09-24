@@ -1,4 +1,4 @@
-import { AbortedError } from "../channel.ts";
+import { AbortedError } from "./errors.ts";
 
 export const sleep = (duration: number) => {
   return new Promise<void>((res) => {

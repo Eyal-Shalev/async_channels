@@ -1,3 +1,4 @@
+import { AbortedError } from "./internal/errors.ts";
 import { BroadcastChannelOptions } from "./broadcast.ts";
 import { Queue } from "./internal/queue.ts";
 import {
@@ -28,6 +29,7 @@ import {
 } from "./pipe.ts";
 import { subscribe } from "./subscribe.ts";
 
+export { AbortedError };
 export { InvalidTransitionError } from "./internal/state-machine.ts";
 
 const eventType = (x: Transition | State): string => {
@@ -569,16 +571,6 @@ function makeAbortPromise(abortCtrl: AbortController) {
   return new Promise<void>((resolve) => {
     abortCtrl.signal.addEventListener("abort", () => resolve());
   });
-}
-
-/**
- * The `Error` class used when `receive` or `send` are aborted before
- * completion.
- */
-export class AbortedError extends Error {
-  constructor(type: "send" | "receive") {
-    super(`${type} aborted`);
-  }
 }
 
 export function isReceiver(x: unknown): x is Receiver<unknown> {
