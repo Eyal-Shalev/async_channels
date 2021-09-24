@@ -1,5 +1,14 @@
 import { Channel, ChannelOptions, Receiver } from "async_channels";
 
+export const addUrl = (ev: Deno.RequestEvent) => ({
+  ...ev,
+  url: new URL(ev.request.url),
+});
+export const addPathParts = (ev: Deno.RequestEvent & { url: URL }) => ({
+  ...ev,
+  pathParts: ev.url.pathname.split("/"),
+});
+
 export const requestMethod = (ev: Deno.RequestEvent) => ev.request.method;
 export const pathPart = <T extends { pathParts: string[] }>(index: number) => (
   ({ pathParts }: T) => pathParts[index]
