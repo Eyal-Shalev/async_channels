@@ -361,7 +361,10 @@ export class Channel<T> implements AsyncIterable<T> {
    * @param {(ch: typeof this) => TOut} fn
    * @returns {TOut}
    */
-  with<TOut>(fn: (t: typeof this) => TOut): TOut {
+  with<TOut, TThis extends Channel<T>>(
+    this: TThis,
+    fn: (t: TThis) => TOut,
+  ): TOut {
     return fn(this);
   }
 

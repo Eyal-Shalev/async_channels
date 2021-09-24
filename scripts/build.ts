@@ -74,9 +74,7 @@ const { diagnostics, files: origFiles } = await Deno.emit(
   },
 );
 
-if (diagnostics.length > 0) {
-  console.assert(false, "Build failed", { diagnostics });
-}
+console.assert(diagnostics.length === 0, "Build failed", { diagnostics });
 
 /**
  * Replaces absolute file URLs with relative paths.
