@@ -344,6 +344,27 @@ export class Channel<T> implements AsyncIterable<T> {
   }
 
   /**
+   * Applies `fn` on `this` and returns the result.
+   *
+   * @example
+   * ```ts
+   * import { Channel } from "./channel.ts";
+   * import { map } from "./pipe.ts";
+   * const srcCh = new Channel<number>(1);
+   * const resCh = srcCh.with(map(n => n * 2));
+   * await srcCh.send(5);
+   * srcCh.close();
+   * console.assert(await resCh.receive() === [10, true]);
+   * ```
+   *
+   * @param {(ch: typeof this) => TOut} fn
+   * @returns {TOut}
+   */
+  with<TOut>(fn: (t: typeof this) => TOut): TOut {
+    return fn(this);
+  }
+
+  /**
    * map returns a receiver channel that contains the results of applying `fn`
    * to each value of `this` channel.
    *
@@ -456,10 +477,6 @@ export class Channel<T> implements AsyncIterable<T> {
    */
   duplicate(n = 2, pipeOpts?: ChannelDuplicateOptions): Channel<T>[] {
     return this.with(duplicate(n, pipeOpts));
-  }
-
-  with<T>(fn: (t: typeof this) => T): T {
-    return fn(this);
   }
 
   subscribe(
