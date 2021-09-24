@@ -44,10 +44,20 @@ const sources: Record<string, string> = {};
 for await (const file of glob) {
   const filePath = path.resolve(file.path);
   const relPath = path.relative(mainPath, filePath);
-  moduleNames.push(relPath.replace(/\.ts$/, ""));
+  const relJSPath = relPath.replace(/\.ts$/, "");
+
+  let tail;
+  for (const cur of relJSPath.split("/").reverse()) {
+    tail = tail ? `${cur}/${tail}` : cur;
+    moduleNames.push(tail);
+  }
+
   const absolutePath = path.join(distESMPath, relPath);
   sources[absolutePath] = await Deno.readTextFile(filePath);
 }
+
+moduleNames.push(...moduleNames.map((x) => `../${x}`));
+moduleNames.push(...moduleNames.map((x) => `../${x}`));
 
 debug({ sources, moduleNames });
 
