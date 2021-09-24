@@ -1,8 +1,7 @@
 # Async Channels
 
 [![Latest Version](https://img.shields.io/github/v/release/eyal-shalev/async_channels?sort=semver&label=Latest%20Version)](https://github.com/Eyal-Shalev/async_channels)
-[![Test](https://github.com/Eyal-Shalev/async_channels/actions/workflows/test.yml/badge.svg)](https://github.com/Eyal-Shalev/async_channels/actions/workflows/test.yml)
-[![Release](https://github.com/Eyal-Shalev/async_channels/actions/workflows/release.yml/badge.svg)](https://github.com/Eyal-Shalev/async_channels/actions/workflows/release.yml)
+[![Test & Release](https://github.com/Eyal-Shalev/async_channels/actions/workflows/test-and-release.yml/badge.svg)](https://github.com/Eyal-Shalev/async_channels/actions/workflows/test-and-release.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 Inspired by `Go` & `Clojure` Channels, `async_channels` provides channels as an
