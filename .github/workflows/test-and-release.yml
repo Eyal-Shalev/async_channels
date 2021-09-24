@@ -27,45 +27,6 @@ jobs:
         run: deno lint
 
       - name: Run tests
-        run: bash ./scripts/run-tests.bash
-
-  package-json:
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' }}
-    steps: 
-      - name: Git Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
-
-      - name: Get version
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
-
-      - name: Make GitHub package.json
-        env:
-          SCOPE: Eyal-Shalev
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
-        run: bash ./scripts/package-json.bash
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: github-package-json
-          path: package.json
-
-      - name: Make NPM package.json
-        env:
-          SCOPE: eyalsh
-          VERSION: ${{ steps.get_version.outputs.VERSION }}
-        run: bash ./scripts/package-json.bash
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: npm-package-json
-          path: package.json
 
 
   build:
@@ -112,6 +73,11 @@ jobs:
         with:
           node-version: 14.x
 
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
       - name: Setup Rollup
         run: npm install --global rollup@^2.57.0 rollup-plugin-terser@^7.0.2 rollup-plugin-dts@^4.0.0 rollup-plugin-license@^2.5.0 typescript
 
@@ -137,6 +103,45 @@ jobs:
         with:
           name: dist
           path: dist
+        run: bash ./scripts/run-tests.bash
+
+  package-json:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    steps: 
+      - name: Git Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Get version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+
+      - name: Make GitHub package.json
+        env:
+          SCOPE: Eyal-Shalev
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+        run: bash ./scripts/package-json.bash
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: github-package-json
+          path: package.json
+
+      - name: Make NPM package.json
+        env:
+          SCOPE: eyalsh
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+        run: bash ./scripts/package-json.bash
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: npm-package-json
+          path: package.json
 
   gpr-publish:
     name: GitHub Publish
