@@ -61,7 +61,10 @@ export class BroadcastChannel<TMsg, TTopic> {
     this.options = { sendMode: defaultBroadcastSendMode, ...(options ?? {}) };
   }
 
-  with<T>(fn: (t: typeof this) => T): T {
+  with<T, TThis extends BroadcastChannel<TMsg, TTopic>>(
+    this: TThis,
+    fn: (t: TThis) => T,
+  ): T {
     return fn(this);
   }
 
