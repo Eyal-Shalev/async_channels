@@ -3,8 +3,6 @@ import { Channel } from "./channel.ts";
 import subscribe from "./subscribe.ts";
 
 Deno.test("subscribe", async () => {
-  console.log();
-
   type TMsg = { topic: string; tweet: string };
 
   const tweeter = new Channel<TMsg>(0);
