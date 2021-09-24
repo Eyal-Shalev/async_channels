@@ -233,7 +233,7 @@ jobs:
           prerelease: true
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           title: "Draft for ${{ github.event.label.name }}"
-          automatic_release_tag: "draft-${{ step.get_pr_id.outputs.PR_ID }}"
+          automatic_release_tag: "draft-${{ steps.get_pr_id.outputs.PR_ID }}"
           files: |
             LICENSE
             README.md
