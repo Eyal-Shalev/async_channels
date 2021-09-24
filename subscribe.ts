@@ -1,15 +1,16 @@
-import { BroadcastChannel } from "./broadcast.ts";
+import { BroadcastChannel, BroadcastChannelPipeOptions } from "./broadcast.ts";
 import { Receiver } from "./channel.ts";
 
 export const other = Symbol("other");
 export function subscribe<TMsg>(
   fn: (_: TMsg) => string | number | symbol,
-  ...topics: (string | number | symbol)[]
+  topics: (string | number | symbol)[],
+  options?: BroadcastChannelPipeOptions,
 ) {
   return (
     ch: Receiver<TMsg>,
   ): Record<string | number | symbol, Receiver<TMsg>> => {
-    const broadcastCh = BroadcastChannel.from(ch, fn);
+    const broadcastCh = BroadcastChannel.from(ch, fn, options);
 
     return {
       [other]: broadcastCh.subscribe((topic) => !topics.includes(topic))[0],
@@ -19,3 +20,5 @@ export function subscribe<TMsg>(
     };
   };
 }
+
+export default Object.assign(subscribe, { other });

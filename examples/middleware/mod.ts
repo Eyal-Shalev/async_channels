@@ -1,9 +1,4 @@
-import {
-  BroadcastChannel,
-  Channel,
-  ChannelOptions,
-  Receiver,
-} from "async_channels";
+import { Channel, ChannelOptions, Receiver } from "async_channels";
 
 export const requestMethod = (ev: Deno.RequestEvent) => ev.request.method;
 export const pathPart = <T extends { pathParts: string[] }>(index: number) => (
@@ -32,23 +27,4 @@ export function application(
     }).receive().catch(logErrCtx("Deno.listen(options)", listenOpts));
     appCh.close();
   }
-}
-
-export const other = Symbol("other");
-export function subscribe<TMsg>(
-  fn: (_: TMsg) => string | number | symbol,
-  ...topics: (string | number | symbol)[]
-) {
-  return (
-    ch: Receiver<TMsg>,
-  ): Record<string | number | symbol, Receiver<TMsg>> => {
-    const broadcastCh = BroadcastChannel.from(ch, fn);
-
-    return {
-      [other]: broadcastCh.subscribe((topic) => !topics.includes(topic))[0],
-      ...Object.fromEntries(topics.map((topic) => {
-        return [topic, broadcastCh.subscribe(topic)[0]];
-      })),
-    };
-  };
 }

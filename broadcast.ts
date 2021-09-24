@@ -169,6 +169,11 @@ export class BroadcastChannel<TMsg, TTopic> {
         ch.close();
       });
     });
+    this.fnSubscribers.forEach((channels) => {
+      channels.forEach((ch) => {
+        ch.close();
+      });
+    });
   }
 
   protected error(...args: unknown[]) {

@@ -4,19 +4,14 @@ import {
   methodNotAllowed,
   notFound,
 } from "./respondWith.ts";
-import {
-  application,
-  other,
-  pathPart,
-  requestMethod,
-  subscribe,
-} from "./mod.ts";
+import { application, pathPart, requestMethod } from "./mod.ts";
+import { subscribe } from "async_channels";
 
 const [appCh, listenAndServe] = application({ bufferSize: 10 });
 
 const {
   api: apiCh,
-  [other]: staticCh,
+  [subscribe.other]: staticCh,
 } = appCh
   .map((ev) => ({ ...ev, url: new URL(ev.request.url) }))
   .map((ev) => ({ ...ev, pathParts: ev.url.pathname.split("/") }))
@@ -29,7 +24,7 @@ staticCh.forEach((ev) => {
 const {
   ping: pingCh,
   pong: pongCh,
-  [other]: otherCh,
+  [subscribe.other]: otherCh,
 } = apiCh.with(subscribe(pathPart(2), "ping", "pong"));
 
 otherCh.forEach(notFound);
@@ -37,14 +32,14 @@ otherCh.forEach(notFound);
 const {
   GET: pingGetCh,
   POST: pingPostCh,
-  [other]: pingOtherCh,
+  [subscribe.other]: pingOtherCh,
 } = pingCh.with(subscribe(requestMethod, "GET", "POST"));
 pingOtherCh.forEach(methodNotAllowed);
 
 const {
   GET: pongGetCh,
   POST: pongPostCh,
-  [other]: pongOtherCh,
+  [subscribe.other]: pongOtherCh,
 } = pongCh.with(subscribe(requestMethod, "GET", "POST"));
 pongOtherCh.forEach(methodNotAllowed);
 

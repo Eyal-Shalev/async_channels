@@ -1,3 +1,4 @@
+import { BroadcastChannelOptions } from "./broadcast.ts";
 import { Queue } from "./internal/queue.ts";
 import {
   Closed,
@@ -428,7 +429,7 @@ export class Channel<T> implements AsyncIterable<T> {
    * @return {Receiver<void>}
    */
   forEach(
-    fn: (val: T) => void | Promise<void>,
+    fn: (val: T) => unknown | Promise<unknown>,
     pipeOpts?: ChannelPipeOptions,
   ): Receiver<void> {
     return this.with(forEach(fn, pipeOpts));
@@ -481,9 +482,10 @@ export class Channel<T> implements AsyncIterable<T> {
 
   subscribe(
     fn: (_: T) => string | number | symbol,
-    ...topics: (string | number | symbol)[]
+    topics: (string | number | symbol)[],
+    options?: BroadcastChannelOptions,
   ): Record<string | number | symbol, Receiver<T>> {
-    return this.with(subscribe(fn, ...topics));
+    return this.with(subscribe(fn, topics, options));
   }
 
   static from<T>(

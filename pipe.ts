@@ -99,7 +99,7 @@ export function flatMap<T, TOut>(
 }
 
 export function forEach<T>(
-  fn: (val: T) => void | Promise<void>,
+  fn: (val: T) => unknown | Promise<unknown>,
   pipeOpts?: ChannelPipeOptions,
 ) {
   return (target: Receiver<T>) => {
