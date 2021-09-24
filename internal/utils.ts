@@ -1,3 +1,5 @@
+import { AbortedError } from "../channel.ts";
+
 export const sleep = (duration: number) => {
   return new Promise<void>((res) => {
     setTimeout(() => res(), duration);
@@ -16,6 +18,11 @@ export function recordWithDefaults<TKey extends string | symbol, TVal>(
       return target[prop];
     },
   });
+}
+
+export function ignoreAbortedError(err: unknown): Promise<void> {
+  if (err instanceof AbortedError) return Promise.resolve();
+  return Promise.reject(err);
 }
 
 export function makeAbortCtrl(
