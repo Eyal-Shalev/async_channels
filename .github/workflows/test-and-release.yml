@@ -7,6 +7,9 @@ on:
     tags:
       - v*
 
+env:  
+  BUNDLE_NAME: async_channels
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -96,8 +99,8 @@ jobs:
       - name: Create Bundles
         run: |
           rollup dist/esm/mod.js --file "dist/${BUNDLE_NAME}.d.ts" --format "es" --plugin dts --plugin "license={banner: { content: {file: 'LICENSE_HEADER'}, commentStyle: 'ignored'}}"
-          for f in $FORMATS; do rollup dist/esm/mod.js --file "dist/${BUNDLE_NAME}.$f.js" --format "$f" --name "${BUNDLE_NAME}" --plugin "license={banner: { content: {file: 'LICENSE_HEADER'}, commentStyle: 'ignored'}}"; done
-          for f in $FORMATS; do rollup dist/esm/mod.js --file "dist/${BUNDLE_NAME}.$f.min.js" --format "$f" --name "${BUNDLE_NAME}" --plugin terser --plugin "license={banner: { content: {file: 'LICENSE_HEADER'}, commentStyle: 'ignored'}}"; done
+          for f in $FORMATS; do rollup dist/esm/mod.js --validate --sourcemap --file "dist/${BUNDLE_NAME}.$f.js" --format "$f" --name "${BUNDLE_NAME}" --plugin "license={banner: { content: {file: 'LICENSE_HEADER'}, commentStyle: 'ignored'}}"; done
+          for f in $FORMATS; do rollup dist/esm/mod.js --validate --sourcemap --file "dist/${BUNDLE_NAME}.$f.min.js" --format "$f" --name "${BUNDLE_NAME}" --plugin terser --plugin "license={banner: { content: {file: 'LICENSE_HEADER'}, commentStyle: 'ignored'}}"; done
 
       - uses: actions/upload-artifact@v2
         with:
@@ -145,7 +148,7 @@ jobs:
   gpr-publish:
     name: GitHub Publish
     runs-on: ubuntu-latest
-    needs: [package-json, rollup]
+    needs: [rollup, package-json]
     if: ${{ github.event_name == 'push' }}
     permissions:
       packages: write
@@ -177,7 +180,7 @@ jobs:
   npm-publish:
     name: NPM Publish
     runs-on: ubuntu-latest
-    needs: [package-json, rollup]
+    needs: [rollup, package-json]
     if: ${{ github.event_name == 'push' }}
     permissions:
       packages: write
