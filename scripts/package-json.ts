@@ -1,12 +1,21 @@
+import { grantOrThrow } from "deno/permissions/mod.ts";
 import { basename, dirname, fromFileUrl, join } from "deno/path/mod.ts";
 import { valid } from "semver";
 
-const version = Deno.env.get("VERSION") || null;
+await grantOrThrow(
+  { name: "env", variable: "VERSION" },
+  { name: "env", variable: "SCOPE" },
+);
+
+const version = Deno.env.get("VERSION");
+if (!version) {
+  throw new TypeError(`VERSION environment variable is missing`);
+}
 if (!valid(version)) {
   throw new TypeError(`${version} isn't a valid semver version`);
 }
 
-const scope = Deno.env.get("SCOPE") || "";
+const scope = Deno.env.get("SCOPE");
 if (!scope) {
   throw new TypeError(`SCOPE environment variable is missing`);
 }
@@ -25,25 +34,31 @@ const data = {
   bugs: {
     url: `https://github.com/Eyal-Shalev/${name}/issues`,
   },
-  license: "GPL-3.0-only",
+  license: "GPL-3.0-or-later",
   author: `Eyal Shalev <eyalsh@gmail.com> (https://github.com/Eyal-Shalev)`,
   main: `dist/${name}.cjs.js`,
-  module: `dist/${name}.esm.js`,
+  module: `dist/${name}.esm.mjs`,
   types: `dist/${name}.d.ts`,
-  type: "module",
   repository: {
     type: "git",
     url: `github:Eyal-Shalev/${name}`,
   },
   engines: {
-    node: ">=14",
+    node: ">=v15.0.0",
   },
   exports: {
     ".": {
       require: `./dist/${name}.cjs.js`,
-      import: `./dist/${name}.esm.js`,
+      import: `./dist/${name}.esm.mjs`,
     },
   },
+  files: [
+    "LICENSE",
+    "README.md",
+    "dist/*.d.ts",
+    "dist/*.js",
+    "dist/*.mjs",
+  ],
 };
 
 await Deno.writeTextFile(
