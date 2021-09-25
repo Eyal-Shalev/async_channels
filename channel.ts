@@ -71,17 +71,17 @@ export interface ChannelOptions {
   debugExtra?: Record<string, unknown>;
 }
 
-export type Closer = Pick<Channel<unknown>, "close" | "with">;
+export type Closer = Pick<Channel<unknown>, "close">;
 
 /**
  * @template T The type of value that can be sent.
  */
-export type Sender<T> = Pick<Channel<T>, "send" | "with">;
+export type Sender<T> = Pick<Channel<T>, "send">;
 
 /**
  * @template T The type of value that can be received.
  */
-export type Receiver<T> = Omit<Channel<T>, "send">;
+export type Receiver<T> = Omit<Channel<T>, "close" | "send">;
 
 export interface ClosedReceiver extends Receiver<unknown> {
   receive(abortCtrl?: AbortController): Promise<[undefined, false]>;

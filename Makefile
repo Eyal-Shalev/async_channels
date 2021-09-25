@@ -17,6 +17,9 @@ check-rollup:
 	npm list -g typescript || npm list typescript
 	npm list -g rollup-plugin-dts || npm list rollup-plugin-dts
 
+check-genhtml:
+	genhtml -v
+
 all: clean build build-min build-types
 
 fmt: check-deno
@@ -29,7 +32,16 @@ lint: check-deno
 	deno lint --ignore="dist,package.json"
 
 test: check-deno
-	deno test --lock "scripts/tests-lock.json" --import-map scripts/import_map.json --doc .
+	deno test --unstable --lock "scripts/test-lock.json" --import-map scripts/import_map.json --doc --coverage=coverage/data .
+
+coverage: test
+	deno coverage --unstable --exclude="test(_utils)?\.(js|mjs|ts|jsx|tsx)$$" coverage/data --lcov > coverage/profile.lcov
+
+coverage-html: coverage check-genhtml
+	genhtml -o coverage/html coverage/profile.lcov
+
+coverage-serve: coverage-html check-deno
+	deno run --allow-net="0.0.0.0:4507" --allow-read="." https://deno.land/std/http/file_server.ts coverage/html
 
 package-json: check-deno
 	deno run --lock scripts/package-json-lock.json --import-map scripts/import_map.json --allow-env="SCOPE,VERSION" --allow-write="./package.json" scripts/package-json.ts
@@ -67,7 +79,6 @@ build-iife-min: check-esbuild
 post-build-test: check-node check-npm
 	node -e 'import("./dist/async_channels.esm.mjs").catch(e=>console.error(e)).then(ac => console.log(ac))'
 	node -e 'console.log(require("./dist/async_channels.cjs.js"))'
-	npm publish --dry-run
 
 install: install-esbuild install-rollup
 
@@ -78,7 +89,7 @@ install-esbuild: check-npm
 	npm i -g esbuild
 
 clean:
-	rm -rf dist
+	rm -rf dist coverage
 
 clearscr:
 	clear
