@@ -41,7 +41,7 @@ jobs:
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 14
+          node-version: 15
           registry-url: 'https://npm.pkg.github.com'
 
       - name: Setup Deno
@@ -54,6 +54,9 @@ jobs:
 
       - name: Build
         run: make all
+        
+      - name: Post Build Test
+        run: make post-build-test
 
       - uses: actions/upload-artifact@v2
         with:
@@ -123,7 +126,7 @@ jobs:
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 14
+          node-version: 15
           registry-url: 'https://npm.pkg.github.com'
 
       - run: npm publish
@@ -155,7 +158,7 @@ jobs:
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 14
+          node-version: 15
           registry-url: 'https://registry.npmjs.org'
 
       - run: npm publish

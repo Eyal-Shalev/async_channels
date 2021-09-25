@@ -3,6 +3,9 @@ export LICENSE_BANNER := $(file < LICENSE_BANNER)
 check-npm:
 	npm --version
 
+check-node:
+	node --version
+
 check-deno:
 	deno --version
 
@@ -60,6 +63,10 @@ build-cjs-min: check-esbuild
 	
 build-iife-min: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.iife.min.js --format=iife --global-name=async_channels mod.ts
+
+post-build-test: check-node
+	node -e 'import("./dist/async_channels.esm.mjs").catch(e=>console.error(e)).then(ac => console.log(ac))'
+	node -e 'console.log(require("./dist/async_channels.cjs.js"))'
 
 install: install-esbuild install-rollup
 
