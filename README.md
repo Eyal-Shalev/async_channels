@@ -15,7 +15,7 @@ Import the module from one of the CDNs that mirror
 [npmjs.com](https://npmjs.com):
 
 - [skypack/@eyalsh/async_channels](https://skypack.dev/view/@eyalsh/async_channels)
-- [unpkg/@eyalsh/async_channels](https://unpkg.com/@eyalsh/async_channels/dist/async_channels.esm.js)
+- [unpkg/@eyalsh/async_channels](https://unpkg.com/@eyalsh/async_channels/dist/async_channels.esm.mjs)
 
 ```javascript
 import { Channel } from "https://cdn.skypack.dev/@eyalsh/async_channels";
@@ -30,7 +30,7 @@ A compiled version exists for every major dependency management system in the
 Download one of them and import it
 
 ```javascript
-import { Channel } from "/path/to/async_channels.esm.js";
+import { Channel } from "/path/to/async_channels.esm.mjs";
 const ch = new Channel();
 // ...
 ```

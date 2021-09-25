@@ -42,24 +42,24 @@ bundle-types: check-rollup
 build: build-esm build-cjs build-iife
 
 build-esm: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.esm.js mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.esm.mjs --format="esm" mod.ts
 	
 build-cjs: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.cjs.js mod.ts --format=cjs
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.cjs.js --format=cjs mod.ts
 	
 build-iife: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.iife.js mod.ts --format=iife --global-name=async_channels
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.iife.js --format=iife --global-name=async_channels mod.ts
 
 build-min: build-esm-min build-cjs-min build-iife-min
 
 build-esm-min: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.esm.min.js mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.esm.min.mjs --format="esm" mod.ts
 	
 build-cjs-min: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.cjs.min.js mod.ts --format=cjs
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.cjs.min.js --format=cjs mod.ts
 	
 build-iife-min: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.iife.min.js mod.ts --format=iife --global-name=async_channels
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.iife.min.js --format=iife --global-name=async_channels mod.ts
 
 install: install-esbuild install-rollup
 
