@@ -1,1 +1,3 @@
 ignore: []
+fixes:
+  - "/home/runner/work/async_channels/async_channels::"
