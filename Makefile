@@ -11,6 +11,7 @@ check-esbuild:
 
 check-rollup:
 	rollup --version
+	npm list -g typescript || npm list typescript
 	npm list -g rollup-plugin-dts || npm list rollup-plugin-dts
 
 all: clean build build-min build-types
@@ -63,7 +64,7 @@ build-iife-min: check-esbuild
 install: install-esbuild install-rollup
 
 install-rollup: check-npm
-	npm i -g rollup rollup-plugin-dts
+	npm i -g rollup rollup-plugin-dts typescript
 
 install-esbuild: check-npm
 	npm i -g esbuild
