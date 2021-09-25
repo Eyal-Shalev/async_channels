@@ -13,14 +13,10 @@ type SendCloser<T> = Sender<T> & Closer;
 
 export type Subscribable<TMsg, TTopic> = Pick<
   BroadcastChannel<TMsg, TTopic>,
-  "subscribe" | "with"
+  "subscribe" | "subscribeFn"
 >;
 
 type TopicFn<T> = (topic: T) => boolean;
-
-function isTopicFn<T>(x: T | TopicFn<T>): x is TopicFn<T> {
-  return typeof x === "function";
-}
 
 export type BroadcastSendMode =
   | "WaitForAll"
@@ -37,6 +33,8 @@ export function isBroadcastSendMode(x: unknown): x is BroadcastSendMode {
   ] as unknown[]).includes(x);
 }
 
+export type BroadcastSubscribeOptions = Omit<ChannelPipeOptions, "signal">;
+
 export interface BroadcastChannelOptions extends ChannelOptions {
   sendMode?: BroadcastSendMode;
 }
@@ -44,7 +42,7 @@ export type BroadcastChannelPipeOptions =
   & BroadcastChannelOptions
   & Omit<ChannelPipeOptions, "bufferSize">;
 
-export class BroadcastChannel<TMsg, TTopic> {
+export class BroadcastChannel<TMsg, TTopic> implements SendCloser<TMsg> {
   protected subscribers = new Map<TTopic | symbol, Set<SendCloser<TMsg>>>();
   protected fnSubscribers = new Map<TopicFn<TTopic>, Set<SendCloser<TMsg>>>();
   protected readonly options: BroadcastChannelOptions;
@@ -59,13 +57,6 @@ export class BroadcastChannel<TMsg, TTopic> {
     options?: BroadcastChannelOptions,
   ) {
     this.options = { sendMode: defaultBroadcastSendMode, ...(options ?? {}) };
-  }
-
-  with<T, TThis extends BroadcastChannel<TMsg, TTopic>>(
-    this: TThis,
-    fn: (t: TThis) => T,
-  ): T {
-    return fn(this);
   }
 
   static from<TMsg, TTopic>(
@@ -96,7 +87,6 @@ export class BroadcastChannel<TMsg, TTopic> {
       if (!fn(topic)) continue;
       for (const target of fnTargets) targets.push(target);
     }
-
     for (const target of (this.subscribers.get(topic) || [])) {
       targets.push(target);
     }
@@ -110,51 +100,60 @@ export class BroadcastChannel<TMsg, TTopic> {
       case "WaitForOne":
         console.assert(
           targets.length > 1,
-          "BroadcastChannel has at least 1 subscriber",
+          "sending on BroadcastChannel (WaitForOne) requires at least 1 subscriber",
         );
         await select(
           targets.map((target) => [target, msg] as SelectOperation<TMsg>),
           { abortCtrl },
         );
         return;
-      case "WaitForAll": {
+      case "WaitForAll":
         await Promise.all(targets.map((target) => {
-          const targetAbortCtrl = abortCtrl && new AbortController();
-          abortCtrl?.signal.addEventListener(
-            "abort",
-            () => targetAbortCtrl?.abort(),
-          );
-          return target.send(msg, targetAbortCtrl);
+          return target.send(msg, makeAbortCtrl(abortCtrl?.signal));
         }));
         return;
-      }
     }
   }
 
-  subscribe(
-    topic: TTopic | TopicFn<TTopic>,
+  subscribeFn(
+    topicFn: TopicFn<TTopic>,
+    subOpts?: BroadcastSubscribeOptions,
   ): [Receiver<TMsg>, () => void] {
     if (!this.isOpen) {
       throw new TypeError("Cannot subscribe to a closed BroadcastChannel");
     }
 
-    const options = {
-      debugExtra: { topic, ...this.options?.debugExtra },
-      ...this.options,
-    };
+    const { bufferSize, debugExtra, ...options } = subOpts ?? {};
 
-    const ch = new Channel<TMsg>(0, options);
+    const ch = new Channel<TMsg>(bufferSize, {
+      ...options,
+      debugExtra: { topicFn, ...debugExtra },
+    });
 
-    if (isTopicFn(topic)) {
-      if (!this.fnSubscribers.has(topic)) {
-        this.fnSubscribers.set(topic, new Set());
-      }
-      this.fnSubscribers.get(topic)?.add(ch);
-      const unsubscribe = () => {
-        this.fnSubscribers.get(topic)?.delete(ch);
-      };
-      return [ch, unsubscribe];
+    if (!this.fnSubscribers.has(topicFn)) {
+      this.fnSubscribers.set(topicFn, new Set());
     }
+    this.fnSubscribers.get(topicFn)?.add(ch);
+    const unsubscribe = () => {
+      this.fnSubscribers.get(topicFn)?.delete(ch);
+    };
+    return [ch, unsubscribe];
+  }
+
+  subscribe(
+    topic: TTopic,
+    subOpts?: BroadcastSubscribeOptions,
+  ): [Receiver<TMsg>, () => void] {
+    if (!this.isOpen) {
+      throw new TypeError("Cannot subscribe to a closed BroadcastChannel");
+    }
+
+    const { bufferSize, debugExtra, ...options } = subOpts ?? {};
+
+    const ch = new Channel<TMsg>(bufferSize, {
+      ...options,
+      debugExtra: { topic, ...debugExtra },
+    });
 
     if (!this.subscribers.has(topic)) this.subscribers.set(topic, new Set());
     this.subscribers.get(topic)?.add(ch);
@@ -179,14 +178,14 @@ export class BroadcastChannel<TMsg, TTopic> {
     });
   }
 
-  protected error(...args: unknown[]) {
+  error(...args: unknown[]) {
     console.error(...args, {
       topicFn: this.topicFn,
       ...(this.options?.debugExtra ?? {}),
     });
   }
 
-  protected debug(...args: unknown[]) {
+  debug(...args: unknown[]) {
     if (this.options?.debug) {
       console.debug(...args, {
         topicFn: this.topicFn,

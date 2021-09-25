@@ -1,7 +1,10 @@
-import { assertEquals, fail } from "deno/testing/asserts.ts";
-import { sleep } from "./internal/utils.ts";
+import { assertEquals, assertRejects, fail } from "deno/testing/asserts.ts";
 import { Channel } from "./channel.ts";
 import { select } from "./select.ts";
+
+Deno.test("select with 0 ops", async () => {
+  await assertRejects(() => select([]), TypeError);
+});
 
 Deno.test("select when 1 channel is buffered", async () => {
   const c1 = new Channel<string>(0);
@@ -42,5 +45,4 @@ Deno.test("select return default", async () => {
 
   c1.close();
   c2.close();
-  await sleep(100);
 });

@@ -247,17 +247,15 @@ Deno.test("pipeline", async () => {
   await p;
 });
 
-type foo = Generator;
-
 Deno.test("Channel.from", async () => {
   const ch = Channel.from(async function* () {
-    for (let i = 0; i < 6; i++) {
-      await sleep(100);
+    for (let i = 0; i < 3; i++) {
+      await sleep(10);
       yield i;
     }
   }());
 
-  for (const expected of [0, 1, 2, 3, 4, 5]) {
+  for (const expected of [0, 1, 2]) {
     const [actual] = await ch.receive();
     assertEquals(actual, expected);
   }

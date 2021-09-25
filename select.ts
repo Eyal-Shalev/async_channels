@@ -1,4 +1,5 @@
 import { Channel, isReceiver, Receiver, Sender } from "./channel.ts";
+import { BroadcastChannel } from "./broadcast.ts";
 import { sleep } from "./internal/utils.ts";
 
 /**
@@ -9,9 +10,15 @@ export interface SelectOptions<TDefault = never> {
   abortCtrl?: AbortController;
 }
 
-export type SelectOperation<T> = Receiver<T> | [Sender<T>, T];
+export type SelectOperation<T> =
+  | Receiver<T>
+  | [Sender<T>, T]
+  | [BroadcastChannel<T, unknown>, T];
 export type SelectDefaultResult<T> = [T, undefined];
-export type SelectOperationResult<T> = [T, Receiver<T>] | [true, Sender<T>];
+export type SelectOperationResult<T> =
+  | [T, Receiver<T>]
+  | [true, Sender<T>]
+  | [true, BroadcastChannel<T, unknown>];
 export type SelectResult<T, TDefault> = (
   | SelectOperationResult<T>
   | SelectDefaultResult<TDefault>
