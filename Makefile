@@ -78,8 +78,7 @@ install-esbuild: check-npm
 	npm i -g esbuild
 
 clean:
-	rm -rf dist/types
-	rm -f dist/*.js dist/*.d.ts
+	rm -rf dist
 
 clearscr:
 	clear
