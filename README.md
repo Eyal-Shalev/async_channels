@@ -68,23 +68,31 @@ import { Channel } from "https://deno.land/x/async_channels/mod.ts";
 const ch = new Channel<unknown>();
 ```
 
-## Example
+## Examples
 
-```typescript
-import { Channel, time } from "https://deno.land/x/async_channels/mod.ts";
+- [middleware (ping-pong)](/examples/middleware)
 
-function produce(num: number) {
-  return Channel.from((async function* () {
-    for (let i = 0; i < num; i++) {
-      await time.timeout(100).receive(); // Do some work...
-      yield i;
-    }
-  })());
-}
+- [pipeline (even or odd)](/examples/even-or-odd-pipeline)
 
-time.timeout(300).receive().then(() => console.log("boo"));
+- [Message Queue](/examples/message-queue)
 
-for await (const product of produce(4)) {
-  console.log({ product });
-}
-```
+- [static site (todos app)](/examples/todos-static)
+
+- ```typescript
+  import { Channel, time } from "https://deno.land/x/async_channels/mod.ts";
+
+  function produce(num: number) {
+    return Channel.from((async function* () {
+      for (let i = 0; i < num; i++) {
+        await time.timeout(100).receive(); // Do some work...
+        yield i;
+      }
+    })());
+  }
+
+  time.timeout(300).receive().then(() => console.log("boo"));
+
+  for await (const product of produce(4)) {
+    console.log({ product });
+  }
+  ```
