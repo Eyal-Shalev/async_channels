@@ -39,7 +39,6 @@ const data = {
   main: `dist/${name}.cjs.js`,
   module: `dist/${name}.esm.mjs`,
   types: `dist/${name}.d.ts`,
-  type: "module",
   repository: {
     type: "git",
     url: `github:Eyal-Shalev/${name}`,
@@ -58,6 +57,7 @@ const data = {
     "README.md",
     "dist/*.d.ts",
     "dist/*.js",
+    "dist/*.mjs",
   ],
 };
 
