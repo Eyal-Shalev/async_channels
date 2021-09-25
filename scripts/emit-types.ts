@@ -7,7 +7,7 @@ const mainPath = path.resolve(
 );
 const distPath = path.join(mainPath, "dist");
 const distTypesPath = path.join(distPath, "types");
-const importMapPath = path.join(mainPath, "import_map.json");
+const importMapPath = path.join(mainPath, "scripts/import_map.json");
 
 grantOrThrow(
   { name: "write", path: distPath },
