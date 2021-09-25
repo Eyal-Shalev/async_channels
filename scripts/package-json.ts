@@ -34,7 +34,7 @@ const data = {
   bugs: {
     url: `https://github.com/Eyal-Shalev/${name}/issues`,
   },
-  license: "GPL-3.0-only",
+  license: "GPL-3.0-or-later",
   author: `Eyal Shalev <eyalsh@gmail.com> (https://github.com/Eyal-Shalev)`,
   main: `dist/${name}.cjs.js`,
   module: `dist/${name}.esm.js`,
@@ -53,6 +53,12 @@ const data = {
       import: `./dist/${name}.esm.js`,
     },
   },
+  files: [
+    "LICENSE",
+    "README.md",
+    "dist/*.d.ts",
+    "dist/*.js",
+  ],
 };
 
 await Deno.writeTextFile(
