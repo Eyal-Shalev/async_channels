@@ -44,7 +44,7 @@ const data = {
     url: `github:Eyal-Shalev/${name}`,
   },
   engines: {
-    node: ">=14",
+    node: ">=v15.0.0",
   },
   exports: {
     ".": {
