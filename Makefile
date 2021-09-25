@@ -16,13 +16,13 @@ check-rollup:
 all: clean build build-min build-types
 
 fmt: check-deno
-	deno fmt --ignore=dist,package.json
+	deno fmt --ignore="dist,package.json"
 
 fmt-check: check-deno
-	deno fmt --check --ignore=dist,package.json
+	deno fmt --check --ignore="dist,package.json"
 
 lint: check-deno
-	deno lint --ignore=dist,package.json
+	deno lint --ignore="dist,package.json"
 
 test: check-deno
 	deno test --lock "scripts/tests-lock.json" --import-map "./import_map.json" --doc .
