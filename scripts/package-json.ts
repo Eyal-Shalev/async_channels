@@ -38,7 +38,7 @@ const data = {
   author: `Eyal Shalev <eyalsh@gmail.com> (https://github.com/Eyal-Shalev)`,
   main: `dist/${name}.cjs.js`,
   module: `dist/${name}.esm.js`,
-  types: "mod.ts",
+  types: `dist/${name}.d.ts`,
   type: "module",
   repository: {
     type: "git",
