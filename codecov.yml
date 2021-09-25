@@ -1,0 +1,6 @@
+ignore:
+  - "coverage"
+  - "examples"
+  - "dist"
+  - "internal/test_utils.ts"
+  - "*_test.ts"
