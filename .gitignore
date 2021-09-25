@@ -1,6 +1,7 @@
-.idea
-.vscode
+/.idea
+/.vscode
 /dist
 /package.json
-node_modules
-package-lock.json
+/coverage
+/node_modules
+/package-lock.json

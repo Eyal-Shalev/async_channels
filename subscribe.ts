@@ -13,7 +13,7 @@ export function subscribe<TMsg>(
     const broadcastCh = BroadcastChannel.from(ch, fn, options);
 
     return {
-      [other]: broadcastCh.subscribe((topic) => !topics.includes(topic))[0],
+      [other]: broadcastCh.subscribeFn((topic) => !topics.includes(topic))[0],
       ...Object.fromEntries(topics.map((topic) => {
         return [topic, broadcastCh.subscribe(topic)[0]];
       })),

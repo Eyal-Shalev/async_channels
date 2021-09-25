@@ -29,8 +29,13 @@ jobs:
       - name: Run linter
         run: make lint
 
-      - name: Run tests
-        run: make test
+      - name: Run tests (with coverage)
+        run: make coverage
+
+      - uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/profile.lcov
 
   build:
     runs-on: ubuntu-latest
