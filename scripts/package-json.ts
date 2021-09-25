@@ -1,12 +1,21 @@
+import { grantOrThrow } from "deno/permissions/mod.ts";
 import { basename, dirname, fromFileUrl, join } from "deno/path/mod.ts";
 import { valid } from "semver";
 
-const version = Deno.env.get("VERSION") || null;
+await grantOrThrow(
+  { name: "env", variable: "VERSION" },
+  { name: "env", variable: "SCOPE" },
+);
+
+const version = Deno.env.get("VERSION");
+if (!version) {
+  throw new TypeError(`VERSION environment variable is missing`);
+}
 if (!valid(version)) {
   throw new TypeError(`${version} isn't a valid semver version`);
 }
 
-const scope = Deno.env.get("SCOPE") || "";
+const scope = Deno.env.get("SCOPE");
 if (!scope) {
   throw new TypeError(`SCOPE environment variable is missing`);
 }
@@ -29,7 +38,7 @@ const data = {
   author: `Eyal Shalev <eyalsh@gmail.com> (https://github.com/Eyal-Shalev)`,
   main: `dist/${name}.cjs.js`,
   module: `dist/${name}.esm.js`,
-  types: `dist/${name}.d.ts`,
+  types: "mod.ts",
   type: "module",
   repository: {
     type: "git",
