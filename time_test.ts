@@ -14,7 +14,7 @@ Deno.test("Timer", async () => {
     assertNumberBetween(
       val.getTime() - start.getTime(),
       duration,
-      duration + 5,
+      duration + 6,
     );
   }
 });
