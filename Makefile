@@ -37,7 +37,7 @@ emit-types: check-deno
 	deno run --lock=scripts/emit-types-lock.json --import-map import_map.json --allow-write=dist --allow-read="." --unstable scripts/emit-types.ts
 
 bundle-types: check-rollup
-	rollup dist/esm/mod.d.ts --file "dist/async_channels.d.ts" --plugin dts
+	rollup dist/types/mod.d.ts --file "dist/async_channels.d.ts" --plugin dts
 
 build: build-esm build-cjs build-iife
 
@@ -70,7 +70,7 @@ install-esbuild: check-npm
 	npm i -g esbuild
 
 clean:
-	rm -rf dist/esm
+	rm -rf dist/types
 	rm -f dist/*.js dist/*.d.ts
 
 clearscr:

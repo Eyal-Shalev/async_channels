@@ -6,7 +6,7 @@ const mainPath = path.resolve(
   path.join(path.fromFileUrl(import.meta.url), "../.."),
 );
 const distPath = path.join(mainPath, "dist");
-const distESMPath = path.join(distPath, "esm");
+const distTypesPath = path.join(distPath, "types");
 const importMapPath = path.join(mainPath, "import_map.json");
 
 grantOrThrow(
@@ -39,7 +39,7 @@ for await (const file of glob) {
     origModuleNames.push(tail);
   }
 
-  const absolutePath = path.join(distESMPath, relPath);
+  const absolutePath = path.join(distTypesPath, relPath);
   sources[absolutePath] = await Deno.readTextFile(filePath);
 }
 
@@ -48,7 +48,7 @@ moduleNames.push(...origModuleNames.map((x) => `../${x}`));
 moduleNames.push(...origModuleNames.map((x) => `../../${x}`));
 
 const { diagnostics, files: origFiles } = await Deno.emit(
-  path.join(distESMPath, "mod.ts"),
+  path.join(distTypesPath, "mod.ts"),
   {
     compilerOptions: {
       emitDeclarationOnly: true,
@@ -71,7 +71,7 @@ console.assert(
 function replaceUrls(contents: string): string {
   moduleNames.forEach((moduleName) => {
     contents = contents.replaceAll(
-      path.toFileUrl(path.join(distESMPath, moduleName)).toString(),
+      path.toFileUrl(path.join(distTypesPath, moduleName)).toString(),
       `${moduleName}`,
     );
   });
@@ -95,7 +95,7 @@ function fixDeclarationFile(contents: string): string {
 const files = Object.fromEntries(
   Object.entries(origFiles).map(([origFileUrl, origContents]) => {
     const origFilePath = path.fromFileUrl(origFileUrl);
-    const origRelPath = path.relative(distESMPath, origFilePath);
+    const origRelPath = path.relative(distTypesPath, origFilePath);
 
     const relPath = origRelPath.replace(/\.ts\.d\.ts$/, ".d.ts");
     const contents = fixDeclarationFile(replaceUrls(origContents));
@@ -104,10 +104,10 @@ const files = Object.fromEntries(
   }),
 );
 
-await Deno.remove(distESMPath, { recursive: true }).catch(() => {});
+await Deno.remove(distTypesPath, { recursive: true }).catch(() => {});
 
 Object.entries(files).map(async ([relPath, contents]) => {
-  const filePath = path.join(distESMPath, relPath);
+  const filePath = path.join(distTypesPath, relPath);
   await Deno.mkdir(path.dirname(filePath), { recursive: true });
   try {
     return await Deno.writeTextFile(filePath, contents, { create: true });
