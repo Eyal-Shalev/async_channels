@@ -29,15 +29,15 @@ lint: check-deno
 	deno lint --ignore="dist,package.json"
 
 test: check-deno
-	deno test --lock "scripts/tests-lock.json" --import-map "./import_map.json" --doc .
+	deno test --lock "scripts/tests-lock.json" --import-map scripts/import_map.json --doc .
 
 package-json: check-deno
-	deno run --lock scripts/package-json-lock.json --import-map import_map.json --allow-env="SCOPE,VERSION" --allow-write="./package.json" scripts/package-json.ts
+	deno run --lock scripts/package-json-lock.json --import-map scripts/import_map.json --allow-env="SCOPE,VERSION" --allow-write="./package.json" scripts/package-json.ts
 
 build-types: emit-types bundle-types
 
 emit-types: check-deno
-	deno run --lock=scripts/emit-types-lock.json --import-map import_map.json --allow-write=dist --allow-read="." --unstable scripts/emit-types.ts
+	deno run --lock=scripts/emit-types-lock.json --import-map scripts/import_map.json --allow-write=dist --allow-read="." --unstable scripts/emit-types.ts
 
 bundle-types: check-rollup
 	rollup dist/types/mod.d.ts --file "dist/async_channels.d.ts" --plugin dts
@@ -64,9 +64,10 @@ build-cjs-min: check-esbuild
 build-iife-min: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.iife.min.js --format=iife --global-name=async_channels mod.ts
 
-post-build-test: check-node
+post-build-test: check-node check-npm
 	node -e 'import("./dist/async_channels.esm.mjs").catch(e=>console.error(e)).then(ac => console.log(ac))'
 	node -e 'console.log(require("./dist/async_channels.cjs.js"))'
+	npm publish --dry-run
 
 install: install-esbuild install-rollup
 

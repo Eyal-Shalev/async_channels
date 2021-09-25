@@ -7,7 +7,7 @@ Run the following to start the example.
 ```shell
 deno run \
   --allow-net="0.0.0.0:5000" --reload \
-  --import-map https://deno.land/x/async_channels/import_map.json \
+  --import-map https://deno.land/x/async_channels/scripts/import_map.json \
   https://deno.land/x/async_channels/examples/middleware/ping_pong.ts
 ```
 
