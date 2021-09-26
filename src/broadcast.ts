@@ -56,7 +56,11 @@ export class BroadcastChannel<TMsg, TTopic> implements SendCloser<TMsg> {
     protected readonly topicFn: (val: TMsg) => TTopic,
     options?: BroadcastChannelOptions,
   ) {
-    this.options = { sendMode: defaultBroadcastSendMode, ...(options ?? {}) };
+    const { sendMode, ...chanOpts } = options ?? {};
+    this.options = {
+      ...chanOpts,
+      sendMode: sendMode ?? defaultBroadcastSendMode,
+    };
   }
 
   static from<TMsg, TTopic>(
@@ -98,10 +102,11 @@ export class BroadcastChannel<TMsg, TTopic> implements SendCloser<TMsg> {
         }
         return;
       case "WaitForOne":
-        console.assert(
-          targets.length > 1,
-          "sending on BroadcastChannel (WaitForOne) requires at least 1 subscriber",
-        );
+        if (targets.length === 0) {
+          throw new Error(
+            "sending on BroadcastChannel (WaitForOne) requires at least 1 subscriber",
+          );
+        }
         await select(
           targets.map((target) => [target, msg] as SelectOperation<TMsg>),
           { abortCtrl },
@@ -112,6 +117,10 @@ export class BroadcastChannel<TMsg, TTopic> implements SendCloser<TMsg> {
           return target.send(msg, makeAbortCtrl(abortCtrl?.signal));
         }));
         return;
+      default:
+        throw new TypeError(
+          `${this.options.sendMode} is not a valid BroadcastChannel sendMode`,
+        );
     }
   }
 

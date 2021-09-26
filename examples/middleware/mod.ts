@@ -28,12 +28,16 @@ export function application(
   return [appCh, listenAndServe];
 
   async function listenAndServe(listenOpts: ListenOptions) {
-    await Channel.from(Deno.listen(listenOpts)).forEach((conn) => {
-      Channel.from(Deno.serveHttp(conn)).forEach((ev) => {
-        appCh.send(ev)
-          .catch(logErrCtx("send(Deno.RequestEvent)", ev));
-      }).receive().catch(logErrCtx("Deno.serveHttp(conn)", conn));
-    }).receive().catch(logErrCtx("Deno.listen(options)", listenOpts));
-    appCh.close();
+    try {
+      await Channel.from(Deno.listen(listenOpts)).forEach((conn) => {
+        Channel.from(Deno.serveHttp(conn)).forEach((ev) => {
+          appCh.send(ev)
+            .catch(logErrCtx("send(Deno.RequestEvent)", ev));
+        }).receive().catch(logErrCtx("Deno.serveHttp(conn)", conn));
+      }).receive().catch(logErrCtx("Deno.listen(options)", listenOpts));
+      appCh.close();
+    } catch (e) {
+      logErr("listenAndServe(options)", listenOpts, e);
+    }
   }
 }

@@ -1,24 +1,43 @@
-import { BroadcastChannel, BroadcastChannelPipeOptions } from "./broadcast.ts";
+import { BroadcastChannel, BroadcastChannelOptions } from "./broadcast.ts";
 import { Receiver } from "./channel.ts";
+import { ChannelPipeOptions } from "./pipe.ts";
 
-export const other = Symbol("other");
-export function subscribe<TMsg>(
-  fn: (_: TMsg) => string | number | symbol,
-  topics: (string | number | symbol)[],
-  options?: BroadcastChannelPipeOptions,
+export const otherTopics: unique symbol = Symbol("other");
+
+export type SubscribeOptions =
+  & BroadcastChannelOptions
+  & Omit<ChannelPipeOptions, "signal">;
+
+export function subscribe<TMsg, TObj>(
+  fn: (_: TMsg) => string | symbol | number,
+  topics: (keyof TObj)[],
+  pipeOpts?: SubscribeOptions,
 ) {
-  return (
-    ch: Receiver<TMsg>,
-  ): Record<string | number | symbol, Receiver<TMsg>> => {
-    const broadcastCh = BroadcastChannel.from(ch, fn, options);
+  return (ch: Receiver<TMsg>) => {
+    const { bufferSize: tmpBufferSize, sendMode, ...commonOpts } = pipeOpts ??
+      {};
 
-    return {
-      [other]: broadcastCh.subscribeFn((topic) => !topics.includes(topic))[0],
-      ...Object.fromEntries(topics.map((topic) => {
-        return [topic, broadcastCh.subscribe(topic)[0]];
-      })),
-    };
+    const bufferSize = tmpBufferSize ?? ch.bufferSize;
+
+    const broadcastCh = BroadcastChannel.from(ch, fn, {
+      ...commonOpts,
+      sendMode,
+    });
+
+    const [otherSub] = broadcastCh.subscribeFn(
+      (topic) => !(topics as unknown[]).includes(topic),
+      { ...commonOpts, bufferSize },
+    );
+
+    const topicSubs = Object.fromEntries(
+      topics.map((topic) => {
+        return [
+          topic,
+          broadcastCh.subscribe(topic, { ...commonOpts, bufferSize })[0],
+        ];
+      }),
+    ) as { [r in keyof TObj]: Receiver<TMsg> };
+
+    return { [otherTopics]: otherSub, ...topicSubs };
   };
 }
-
-export default Object.assign(subscribe, { other });
