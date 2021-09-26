@@ -5,6 +5,7 @@ import {
   makeAbortCtrl,
   recordWithDefaults,
 } from "./internal/utils.ts";
+export * from "./subscribe.ts";
 
 /**
  * Options for pipe operations.

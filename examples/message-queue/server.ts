@@ -7,8 +7,11 @@ import {
   RouterContext,
   Status,
 } from "https://deno.land/x/oak@v9.0.0/mod.ts";
-import { BroadcastChannel, isBroadcastSendMode } from "../../broadcast.ts";
-import { AbortedError, Channel } from "../../channel.ts";
+import {
+  BroadcastChannel,
+  isBroadcastSendMode,
+} from "async_channels/broadcast.ts";
+import { AbortedError, Channel } from "async_channels/channel.ts";
 
 type Message = { topic: string; payload: Blob };
 

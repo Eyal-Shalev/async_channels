@@ -8,12 +8,14 @@ import {
   addPathParts,
   addUrl,
   application,
+  logErrCtx,
   pathPart,
   requestMethod,
 } from "./mod.ts";
-import { subscribe } from "async_channels";
+import { otherTopics, subscribe } from "async_channels/subscribe.ts";
 
-const [rootCh, listenAndServe] = application({ bufferSize: 10 });
+const port = 5000;
+const [rootCh, listenAndServe] = application();
 
 // Create a new channel that consumes rootCh and enriches each
 // message from it with a (parsed) url property a split path parts property.
@@ -23,12 +25,13 @@ const enrichedRootCh = rootCh.map(addUrl).map(addPathParts);
 // staticCh is subscribed to all other requests.
 const {
   api: apiCh,
-  [subscribe.other]: staticCh,
+  [otherTopics]: staticCh,
 } = enrichedRootCh.with(subscribe(pathPart(1), ["api"]));
 
 // Consume all messages from staticCh and respond to them with a custom greeting.
 staticCh.forEach((ev) => {
-  ev.respondWith(new Response(`Hi from ${ev.url.pathname}`));
+  ev.respondWith(new Response(`Hi from ${ev.url.pathname}`))
+    .catch(logErrCtx("staticCh"));
 });
 
 // pingCh & pongCh are subscribed to all requests that start with /api/ping and
@@ -37,7 +40,7 @@ staticCh.forEach((ev) => {
 const {
   ping: pingCh,
   pong: pongCh,
-  [subscribe.other]: otherApiCh,
+  [otherTopics]: otherApiCh,
 } = apiCh.with(subscribe(pathPart(2), ["ping", "pong"]));
 
 // Consume all messages from otherApiCh and respond to all of them with a not
@@ -48,12 +51,12 @@ otherApiCh.forEach(notFound);
 const {
   GET: pingGetCh,
   POST: pingPostCh,
-  [subscribe.other]: pingOtherCh,
+  [otherTopics]: pingOtherCh,
 } = pingCh.with(subscribe(requestMethod, ["GET", "POST"]));
 const {
   GET: pongGetCh,
   POST: pongPostCh,
-  [subscribe.other]: pongOtherCh,
+  [otherTopics]: pongOtherCh,
 } = pongCh.with(subscribe(requestMethod, ["GET", "POST"]));
 
 // Respond with method not allowed for all requests to these apis under different
@@ -73,7 +76,7 @@ const pingMsgsCh = pingPostCh.map(async (ev) => {
 // For each pong GET request, respond with a message that was consumed from pingMsgsCh.
 pongGetCh.forEach(async (ev) => {
   const [blob] = await pingMsgsCh.receive();
-  if (blob) ev.respondWith(new Response(blob));
+  if (blob) ev.respondWith(new Response(blob)).catch(logErrCtx("pongGetCh"));
   else internalServerError("ping channel closed")(ev);
 });
 
@@ -89,9 +92,10 @@ const pongMsgsCh = pongPostCh.map(async (ev) => {
 // For each ping GET request, respond with a message that was consumed from pongMsgsCh.
 pingGetCh.forEach(async (ev) => {
   const [blob] = await pongMsgsCh.receive();
-  if (blob) ev.respondWith(new Response(blob));
+  if (blob) ev.respondWith(new Response(blob)).catch(logErrCtx("pingGetCh"));
   else internalServerError("ping channel closed")(ev);
 });
 
+console.log(`ping pong server started: http://localhost:${port}`);
 // Wait endlessly for connections to start the above pipeline.
-await listenAndServe({ port: 5000 });
+await listenAndServe({ port });

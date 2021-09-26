@@ -1,17 +1,19 @@
 import { assertEquals, fail } from "deno/testing/asserts.ts";
 import { Channel } from "./channel.ts";
-import subscribe from "./subscribe.ts";
+import { otherTopics, subscribe } from "./subscribe.ts";
 
 Deno.test("subscribe", async () => {
   type TMsg = { topic: string; tweet: string };
 
-  const tweeter = new Channel<TMsg>(0);
+  const tweeter = new Channel<TMsg>();
 
   const {
     A: ch1,
     B: ch2,
-    [subscribe.other]: ch3,
-  } = tweeter.with(subscribe((msg) => msg.topic, ["A", "B"]));
+    [otherTopics]: ch3,
+  } = tweeter.with(
+    subscribe((msg) => msg.topic, ["A", "B"]),
+  );
 
   const p = Promise.all([ch1, ch2, ch3].map((ch, index) =>
     (async () => {

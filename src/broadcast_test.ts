@@ -2,9 +2,14 @@ import {
   assert,
   assertEquals,
   assertNotEquals,
+  assertRejects,
   assertThrows,
 } from "deno/testing/asserts.ts";
-import { BroadcastChannel, isBroadcastSendMode } from "./broadcast.ts";
+import {
+  BroadcastChannel,
+  BroadcastSendMode,
+  isBroadcastSendMode,
+} from "./broadcast.ts";
 import { timeout } from "./time.ts";
 import { select } from "./select.ts";
 
@@ -102,24 +107,10 @@ Deno.test("WaitForAll", async () => {
   assertNotEquals(ch, bcast);
 });
 
-Deno.test("unsubscribe (fn)", async () => {
-  const bcast = new BroadcastChannel((x) => x, { sendMode: "WaitForAll" });
-
-  const [aSub] = bcast.subscribe("A");
-  const [, allUnsub] = bcast.subscribeFn(() => true);
-  allUnsub();
-
-  const waitForA = aSub.receive();
-
-  await bcast.send("A");
-
-  assertEquals(await waitForA, ["A", true]);
-});
-
 Deno.test("unsubscribe (topic)", async () => {
   const bcast = new BroadcastChannel((x) => x, { sendMode: "WaitForAll" });
 
-  const [, aUnsub] = bcast.subscribe("A");
+  const [aSub, aUnsub] = bcast.subscribe("A");
   const [allSub] = bcast.subscribeFn(() => true);
   aUnsub();
 
@@ -128,6 +119,20 @@ Deno.test("unsubscribe (topic)", async () => {
   await bcast.send("A");
 
   assertEquals(await waitForA, ["A", true]);
+  assertEquals(await aSub.receive(), [undefined, false]);
+});
+
+Deno.test("unsubscribe (topicFn)", async () => {
+  const bcast = new BroadcastChannel((x) => x, { sendMode: "WaitForAll" });
+
+  const [aSub] = bcast.subscribe("A");
+  const [allSub, allUnsub] = bcast.subscribeFn(() => true);
+  allUnsub();
+
+  const waitForA = aSub.receive();
+  await bcast.send("A");
+  assertEquals(await waitForA, ["A", true]);
+  assertEquals(await allSub.receive(), [undefined, false]);
 });
 
 Deno.test("isBroadcastSendMode", () => {
@@ -142,4 +147,26 @@ Deno.test("subscribe to closed BroadcastChannel", () => {
   bcast.close();
   assertThrows(() => bcast.subscribe(void 0));
   assertThrows(() => bcast.subscribeFn(() => true));
+});
+
+Deno.test("WaitForOne with 0 subscribers", async () => {
+  const bcast = new BroadcastChannel(() => true, {
+    sendMode: "WaitForOne",
+  });
+  await assertRejects(
+    () => bcast.send(""),
+    Error,
+    "requires at least 1 subscriber",
+  );
+});
+
+Deno.test("invalid broadcast sendMode", async () => {
+  const bcast = new BroadcastChannel(() => true, {
+    sendMode: "invalidSendMode" as BroadcastSendMode,
+  });
+  await assertRejects(
+    () => bcast.send(""),
+    TypeError,
+    "invalidSendMode",
+  );
 });

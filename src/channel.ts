@@ -1,5 +1,4 @@
 import { AbortedError } from "./internal/errors.ts";
-import { BroadcastChannelOptions } from "./broadcast.ts";
 import { Queue } from "./internal/queue.ts";
 import {
   Closed,
@@ -26,8 +25,9 @@ import {
   groupBy,
   map,
   reduce,
+  SubscribeOptions,
 } from "./pipe.ts";
-import { subscribe } from "./subscribe.ts";
+import { subscribe, SubscribeReturnType } from "./subscribe.ts";
 
 export { AbortedError };
 export { InvalidTransitionError } from "./internal/state-machine.ts";
@@ -363,7 +363,7 @@ export class Channel<T> implements AsyncIterable<T> {
    * @param {(ch: typeof this) => TOut} fn
    * @returns {TOut}
    */
-  with<TOut, TThis extends Channel<T>>(
+  with<TOut, TThis extends Receiver<T>>(
     this: TThis,
     fn: (t: TThis) => TOut,
   ): TOut {
@@ -485,11 +485,11 @@ export class Channel<T> implements AsyncIterable<T> {
     return this.with(duplicate(n, pipeOpts));
   }
 
-  subscribe(
+  subscribe<TObj>(
     fn: (_: T) => string | number | symbol,
-    topics: (string | number | symbol)[],
-    options?: BroadcastChannelOptions,
-  ): Record<string | number | symbol, Receiver<T>> {
+    topics: (keyof TObj)[],
+    options?: SubscribeOptions,
+  ): SubscribeReturnType<T, TObj> {
     return this.with(subscribe(fn, topics, options));
   }
 
