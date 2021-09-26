@@ -8,7 +8,6 @@ const mainPath = path.resolve(
 const rootPath = path.join(mainPath, "src");
 const distPath = path.join(mainPath, "dist");
 const distTypesPath = path.join(distPath, "types");
-const importMapPath = path.join(mainPath, "scripts/import_map.json");
 
 grantOrThrow(
   { name: "write", path: distPath },
@@ -20,9 +19,6 @@ const glob = fs.expandGlob("**/*.ts", {
   globstar: true,
   exclude: [
     "**/*_test.ts",
-    "dist",
-    "examples",
-    "scripts",
     "internal/test_utils.ts",
   ],
 });
@@ -56,7 +52,6 @@ const { diagnostics, files: origFiles } = await Deno.emit(
       declaration: true,
     },
     sources,
-    importMapPath,
   },
 );
 
