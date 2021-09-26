@@ -1,7 +1,7 @@
 {
   "imports": {
-    "async_channels": "./mod.ts",
-    "async_channels/": "./",
+    "async_channels": "../src/mod.ts",
+    "async_channels/": "../src/",
     "esbuild": "https://deno.land/x/esbuild@v0.13.2/mod.js",
     "deno/": "https://deno.land/std@0.108.0/",
     "semver": "https://deno.land/x/semver@v1.4.0/mod.ts"

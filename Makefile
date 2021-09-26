@@ -23,16 +23,16 @@ check-genhtml:
 all: clean build build-min build-types
 
 fmt: check-deno
-	deno fmt --ignore="dist,package.json"
+	deno fmt src
 
 fmt-check: check-deno
-	deno fmt --check --ignore="dist,package.json"
+	deno fmt --check src
 
 lint: check-deno
-	deno lint --ignore="dist,package.json"
+	deno lint src
 
 test: check-deno
-	deno test --unstable --lock "scripts/test-lock.json" --import-map scripts/import_map.json --doc --coverage=coverage/data .
+	deno test --unstable --lock "scripts/test-lock.json" --import-map scripts/import_map.json --doc --coverage=coverage/data src
 
 coverage: test
 	deno coverage --unstable --exclude="test(_utils)?\.(js|mjs|ts|jsx|tsx)$$" coverage/data --lcov > coverage/profile.lcov
@@ -49,7 +49,7 @@ package-json: check-deno
 build-types: emit-types bundle-types
 
 emit-types: check-deno
-	deno run --lock=scripts/emit-types-lock.json --import-map scripts/import_map.json --allow-write=dist --allow-read="." --unstable scripts/emit-types.ts
+	deno run --lock=scripts/emit-types-lock.json --import-map scripts/import_map.json --allow-write=dist --allow-read=src --unstable scripts/emit-types.ts
 
 bundle-types: check-rollup
 	rollup dist/types/mod.d.ts --file "dist/async_channels.d.ts" --plugin dts
@@ -57,24 +57,24 @@ bundle-types: check-rollup
 build: build-esm build-cjs build-iife
 
 build-esm: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.esm.mjs --format="esm" mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.esm.mjs --format="esm" src/mod.ts
 	
 build-cjs: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.cjs.js --format=cjs mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.cjs.js --format=cjs src/mod.ts
 	
 build-iife: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.iife.js --format=iife --global-name=async_channels mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.iife.js --format=iife --global-name=async_channels src/mod.ts
 
 build-min: build-esm-min build-cjs-min build-iife-min
 
 build-esm-min: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.esm.min.mjs --format="esm" mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.esm.min.mjs --format="esm" src/mod.ts
 	
 build-cjs-min: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.cjs.min.js --format=cjs mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.cjs.min.js --format=cjs src/mod.ts
 	
 build-iife-min: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.iife.min.js --format=iife --global-name=async_channels mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.iife.min.js --format=iife --global-name=async_channels src/mod.ts
 
 post-build-test: check-node check-npm
 	node -e 'import("./dist/async_channels.esm.mjs").catch(e=>console.error(e)).then(ac => console.log(ac))'

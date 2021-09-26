@@ -5,23 +5,20 @@ import { grantOrThrow } from "deno/permissions/mod.ts";
 const mainPath = path.resolve(
   path.join(path.fromFileUrl(import.meta.url), "../.."),
 );
+const rootPath = path.join(mainPath, "src");
 const distPath = path.join(mainPath, "dist");
 const distTypesPath = path.join(distPath, "types");
-const importMapPath = path.join(mainPath, "scripts/import_map.json");
 
 grantOrThrow(
   { name: "write", path: distPath },
-  { name: "read", path: mainPath },
+  { name: "read", path: rootPath },
 );
 
 const glob = fs.expandGlob("**/*.ts", {
-  root: mainPath,
+  root: rootPath,
   globstar: true,
   exclude: [
     "**/*_test.ts",
-    "dist",
-    "examples",
-    "scripts",
     "internal/test_utils.ts",
   ],
 });
@@ -30,7 +27,7 @@ const origModuleNames: string[] = [];
 const sources: Record<string, string> = {};
 for await (const file of glob) {
   const filePath = path.resolve(file.path);
-  const relPath = path.relative(mainPath, filePath);
+  const relPath = path.relative(rootPath, filePath);
   const relJSPath = relPath.replace(/\.ts$/, "");
 
   let tail;
@@ -55,7 +52,6 @@ const { diagnostics, files: origFiles } = await Deno.emit(
       declaration: true,
     },
     sources,
-    importMapPath,
   },
 );
 
