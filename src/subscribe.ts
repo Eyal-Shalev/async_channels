@@ -8,12 +8,16 @@ export type SubscribeOptions =
   & BroadcastChannelOptions
   & Omit<ChannelPipeOptions, "signal">;
 
+export type SubscribeReturnType<TMsg, TObj> =
+  & { [r in keyof TObj]: Receiver<TMsg> }
+  & { [otherTopics]: Receiver<TMsg> };
+
 export function subscribe<TMsg, TObj>(
   fn: (_: TMsg) => string | symbol | number,
   topics: (keyof TObj)[],
   pipeOpts?: SubscribeOptions,
 ) {
-  return (ch: Receiver<TMsg>) => {
+  return (ch: Receiver<TMsg>): SubscribeReturnType<TMsg, TObj> => {
     const { bufferSize: tmpBufferSize, sendMode, ...commonOpts } = pipeOpts ??
       {};
 

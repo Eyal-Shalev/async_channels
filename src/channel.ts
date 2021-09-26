@@ -27,7 +27,7 @@ import {
   reduce,
   SubscribeOptions,
 } from "./pipe.ts";
-import { subscribe } from "./subscribe.ts";
+import { subscribe, SubscribeReturnType } from "./subscribe.ts";
 
 export { AbortedError };
 export { InvalidTransitionError } from "./internal/state-machine.ts";
@@ -489,8 +489,8 @@ export class Channel<T> implements AsyncIterable<T> {
     fn: (_: T) => string | number | symbol,
     topics: (keyof TObj)[],
     options?: SubscribeOptions,
-  ) {
-    return this.with(subscribe<T, TObj>(fn, topics, options));
+  ): SubscribeReturnType<T, TObj> {
+    return this.with(subscribe(fn, topics, options));
   }
 
   static from<T>(
