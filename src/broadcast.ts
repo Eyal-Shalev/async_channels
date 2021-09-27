@@ -124,7 +124,7 @@ export class BroadcastChannel<TMsg, TTopic> implements SendCloser<TMsg> {
     }
   }
 
-  #doSubscribe(
+  protected doSubscribe(
     tuple: [TopicFn<TTopic>, "topicFn"] | [TTopic, "topic"],
     subOpts?: BroadcastSubscribeOptions,
   ): [Receiver<TMsg>, () => void] {
@@ -155,14 +155,14 @@ export class BroadcastChannel<TMsg, TTopic> implements SendCloser<TMsg> {
     topicFn: TopicFn<TTopic>,
     subOpts?: BroadcastSubscribeOptions,
   ): [Receiver<TMsg>, () => void] {
-    return this.#doSubscribe([topicFn, "topicFn"], subOpts);
+    return this.doSubscribe([topicFn, "topicFn"], subOpts);
   }
 
   subscribe(
     topic: TTopic,
     subOpts?: BroadcastSubscribeOptions,
   ): [Receiver<TMsg>, () => void] {
-    return this.#doSubscribe([topic, "topic"], subOpts);
+    return this.doSubscribe([topic, "topic"], subOpts);
   }
 
   close() {
