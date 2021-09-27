@@ -14,3 +14,14 @@ export function assertNumberBetween(
   if (actual < min) throw new AssertionError(msg);
   if (actual >= max) throw new AssertionError(msg);
 }
+
+export function assertLessThan(
+  actual: number,
+  max: number,
+  msg?: string,
+): void {
+  msg = msg ||
+    `actual: ${_format(actual)} >= ${_format(max)},` +
+      `expected ${_format(actual)} < ${_format(max)}`;
+  if (actual >= max) throw new AssertionError(msg);
+}

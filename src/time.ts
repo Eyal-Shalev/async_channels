@@ -84,7 +84,11 @@ export class Ticker {
     );
     this.stop();
     this.intervalId = setInterval(() => {
-      select([[this.#c, new Date()]], { default: void 0 }).catch();
+      select([[this.#c, new Date()]], { default: void 0 })
+        .then(
+          (res) => this.#c.debug(res),
+          (e) => this.#c.error(e),
+        );
     }, duration);
   }
 }
@@ -194,12 +198,15 @@ export class Timer {
  * @param {number} duration A safe and non-negative integer.
  * @returns {Receiver<void>}
  */
-export const timeout = (duration: number): Receiver<void> => {
+export const timeout = (
+  duration: number,
+  options?: ChannelOptions,
+): Receiver<void> => {
   console.assert(
     isNonNegativeSafeInteger(duration),
     "duration is a safe non-negative integer",
   );
-  const c = new Channel<void>(0);
+  const c = new Channel<void>(0, options);
   setTimeout(() => c.close(), duration);
   return c;
 };

@@ -32,10 +32,10 @@ lint: check-deno
 	deno lint src
 
 test: check-deno
-	deno test --unstable --lock "scripts/test-lock.json" --import-map scripts/import_map.json --doc src --coverage=coverage/data
+	deno test --unstable --lock=scripts/test-lock.json --import-map scripts/import_map.json --doc src --coverage=coverage/data
 
 test-watch:check-deno
-	deno test --unstable --lock "scripts/test-lock.json" --import-map scripts/import_map.json --doc src --watch
+	deno test --unstable --lock=scripts/test-lock.json --import-map scripts/import_map.json --doc src --watch
 
 coverage: test
 	deno coverage --unstable --exclude="test(_utils)?\.(js|mjs|ts|jsx|tsx)$$" coverage/data --lcov > coverage/profile.lcov
@@ -45,6 +45,9 @@ coverage-html: coverage check-genhtml
 
 coverage-serve: coverage-html check-deno
 	deno run --allow-net="0.0.0.0:4507" --allow-read="." https://deno.land/std/http/file_server.ts coverage/html
+
+benchmark: check-deno
+	@for f in $(shell ls src/*_bench.ts); do deno run --lock=scripts/bench-lock.json --import-map scripts/import_map.json $${f}; done
 
 package-json: check-deno
 	deno run --lock scripts/package-json-lock.json --import-map scripts/import_map.json --allow-env="SCOPE,VERSION" --allow-write="./package.json" scripts/package-json.ts
