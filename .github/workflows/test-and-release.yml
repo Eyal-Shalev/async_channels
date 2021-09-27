@@ -204,7 +204,7 @@ jobs:
           files: |
             LICENSE
             README.md
-            dist/*.mjs
+            dist/*.js
             dist/*.js
 
       - uses: marvinpinto/action-automatic-releases@latest
@@ -216,5 +216,5 @@ jobs:
           files: |
             LICENSE
             README.md
-            dist/*.mjs
+            dist/*.js
             dist/*.js

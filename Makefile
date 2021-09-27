@@ -63,7 +63,7 @@ bundle-types: check-rollup
 build: build-esm build-cjs build-iife
 
 build-esm: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.esm.mjs --format="esm" src/mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.esm.js --format="esm" src/mod.ts
 	
 build-cjs: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.cjs.js --format=cjs src/mod.ts
@@ -74,7 +74,7 @@ build-iife: check-esbuild
 build-min: build-esm-min build-cjs-min build-iife-min
 
 build-esm-min: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.esm.min.mjs --format="esm" src/mod.ts
+	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.esm.min.js --format="esm" src/mod.ts
 	
 build-cjs-min: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.cjs.min.js --format=cjs src/mod.ts
@@ -83,7 +83,7 @@ build-iife-min: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.iife.min.js --format=iife --global-name=async_channels src/mod.ts
 
 post-build-test: check-node check-npm
-	node -e 'import("./dist/async_channels.esm.mjs").catch(e=>console.error(e)).then(ac => console.log(ac))'
+	node -e 'import("./dist/async_channels.esm.js").catch(e=>console.error(e)).then(ac => console.log(ac))'
 	node -e 'console.log(require("./dist/async_channels.cjs.js"))'
 
 install: install-esbuild install-rollup

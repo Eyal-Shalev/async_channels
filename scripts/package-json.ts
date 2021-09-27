@@ -37,7 +37,7 @@ const data = {
   license: "GPL-3.0-or-later",
   author: `Eyal Shalev <eyalsh@gmail.com> (https://github.com/Eyal-Shalev)`,
   main: `dist/${name}.cjs.js`,
-  module: `dist/${name}.esm.mjs`,
+  module: `dist/${name}.esm.js`,
   types: `dist/${name}.d.ts`,
   repository: {
     type: "git",
@@ -49,7 +49,7 @@ const data = {
   exports: {
     ".": {
       require: `./dist/${name}.cjs.js`,
-      import: `./dist/${name}.esm.mjs`,
+      import: `./dist/${name}.esm.js`,
     },
   },
   files: [
@@ -57,7 +57,7 @@ const data = {
     "README.md",
     "dist/*.d.ts",
     "dist/*.js",
-    "dist/*.mjs",
+    "dist/*.js",
   ],
 };
 
