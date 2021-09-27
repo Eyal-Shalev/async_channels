@@ -8,7 +8,7 @@ Deno.test("Timer", async () => {
   for (const duration of [50, 100, 200]) {
     const start = new Date();
     const t = new Timer(duration);
-    const [val] = await t.c.receive();
+    const [val] = await t.c.get();
     const end = new Date();
     if (!val) fail("unreachable");
     assertNumberBetween(end.getTime() - val.getTime(), 0, 11);
@@ -26,7 +26,7 @@ Deno.test("timeout", async () => {
     runs: 100,
     func: async (b) => {
       b.start();
-      await timeout(1).receive();
+      await timeout(1).get();
       b.stop();
     },
   });
@@ -35,7 +35,7 @@ Deno.test("timeout", async () => {
     runs: 10,
     func: async (b) => {
       b.start();
-      await timeout(10).receive();
+      await timeout(10).get();
       b.stop();
     },
   });
@@ -44,7 +44,7 @@ Deno.test("timeout", async () => {
     runs: 2,
     func: async (b) => {
       b.start();
-      await timeout(50).receive();
+      await timeout(50).get();
       b.stop();
     },
   });
@@ -57,7 +57,7 @@ Deno.test("timeout", async () => {
 Deno.test("after", async () => {
   const duration = 50;
   const start = new Date();
-  const [end] = await after(duration).receive();
+  const [end] = await after(duration).get();
   assert(end !== undefined, "channel should be open");
   assertNumberBetween(
     end.getTime() - start.getTime(),

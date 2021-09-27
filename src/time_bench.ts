@@ -11,7 +11,7 @@ import { Ticker, timeout, Timer } from "./time.ts";
     name: `Timer(${d})`,
     func: async (b) => {
       b.start();
-      await new Timer(d).c.receive();
+      await new Timer(d).c.get();
       b.stop();
     },
   });
@@ -27,7 +27,7 @@ import { Ticker, timeout, Timer } from "./time.ts";
     name: `timeout(${d})`,
     func: async (b) => {
       b.start();
-      await timeout(d).receive();
+      await timeout(d).get();
       b.stop();
     },
   });
@@ -43,7 +43,7 @@ import { Ticker, timeout, Timer } from "./time.ts";
     name: `timeout(${d})`,
     func: async (b) => {
       b.start();
-      await timeout(d).receive();
+      await timeout(d).get();
       b.stop();
     },
   });
@@ -60,7 +60,7 @@ import { Ticker, timeout, Timer } from "./time.ts";
       b.start();
 
       const t = new Ticker(d);
-      for (let i = 0; i < times; i++) await t.c.receive();
+      for (let i = 0; i < times; i++) await t.c.get();
       t.stop();
 
       b.stop();

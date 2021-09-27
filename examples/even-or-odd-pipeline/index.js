@@ -1,24 +1,28 @@
-import {
-  BroadcastChannel,
-  Channel,
-} from "https://cdn.skypack.dev/@eyalsh/async_channels@^v1.0.0-alpha45";
+import { Channel } from "https://unpkg.com/@eyalsh/async_channels@1.0.0-beta2/dist/async_channels.esm.mjs";
 
 const input = new Channel();
 
-const bcast = BroadcastChannel.from(input, ([x]) => {
+const evenOrOdd = ([x]) => {
   const n = parseInt(x);
-  if (Number.isNaN(n)) return "not-number";
+  if (Number.isNaN(n) || x !== String(n)) return "notNumber";
   return n % 2 === 0 ? "even" : "odd";
-});
-bcast.subscribe("not-number").forEach(([n, ackCh]) => {
+};
+
+const {
+  even,
+  odd,
+  notNumber,
+} = input.subscribe(evenOrOdd, ["even", "odd", "notNumber"]);
+
+notNumber.forEach(([n, ackCh]) => {
   alert(`"${n}" is not a number`);
   ackCh.close();
 });
-bcast.subscribe("even").forEach(([n, ackCh]) => {
+even.forEach(([n, ackCh]) => {
   alert(`${n} is even`);
   ackCh.close();
 });
-bcast.subscribe("odd").forEach(([n, ackCh]) => {
+odd.forEach(([n, ackCh]) => {
   alert(`${n} is odd`);
   ackCh.close();
 });
@@ -28,7 +32,7 @@ while (true) {
   if (num === null) break;
   const ackCh = new Channel();
   await input.send([num, ackCh]);
-  await ackCh.receive();
+  await ackCh.get();
 }
 input.close();
 alert("Goodbye");

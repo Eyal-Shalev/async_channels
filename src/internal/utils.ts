@@ -56,8 +56,8 @@ export function isNonPositiveSafeInteger(x: unknown): x is number {
 }
 
 export function isReceiver(x: unknown): x is Receiver<unknown> {
-  return x instanceof Object && "receive" in x &&
-    typeof x["receive"] === "function";
+  return x instanceof Object && "get" in x &&
+    typeof x["get"] === "function";
 }
 
 export function raceAbort<T>(

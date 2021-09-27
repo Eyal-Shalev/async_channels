@@ -86,13 +86,13 @@ const ch = new Channel<unknown>();
   function produce(num: number) {
     return Channel.from((async function* () {
       for (let i = 0; i < num; i++) {
-        await time.timeout(100).receive(); // Do some work...
+        await time.timeout(100).get(); // Do some work...
         yield i;
       }
     })());
   }
 
-  time.timeout(300).receive().then(() => console.log("boo"));
+  time.timeout(300).get().then(() => console.log("boo"));
 
   for await (const product of produce(4)) {
     console.log({ product });

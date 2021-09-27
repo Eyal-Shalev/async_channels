@@ -64,7 +64,7 @@ export type Sender<T> = Pick<Channel<T>, "send">;
 export type Receiver<T> = Omit<Channel<T>, "close" | "send">;
 
 export interface ClosedReceiver extends Receiver<unknown> {
-  receive(abortCtrl?: AbortController): Promise<[undefined, false]>;
+  get(abortCtrl?: AbortController): Promise<[undefined, false]>;
 }
 
 /**
@@ -172,7 +172,7 @@ export class Channel<T> implements AsyncIterable<T> {
    *   console.assert(ok === true)
    * ```
    *
-   * Aborting a receive request:
+   * Aborting a get request:
    * ```ts
    *   import {Channel, AbortedError} from "./channel.ts";
    *   const ch = new Channel(1);
@@ -189,8 +189,8 @@ export class Channel<T> implements AsyncIterable<T> {
    * ```
    *
    * @param {AbortController} [abortCtrl]
-   *   When provided `receive` will `abort` the controller when a value is available.
-   *   But if the controller is aborted before that, the promise returned by `receive` will be rejected.
+   *   When provided `get` will `abort` the controller when a value is available.
+   *   But if the controller is aborted before that, the promise returned by `get` will be rejected.
    * @returns {Promise<[T, true] | [undefined, false]>}
    *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
    */
@@ -232,13 +232,6 @@ export class Channel<T> implements AsyncIterable<T> {
   }
 
   /**
-   * @deprecated use `Channel.get()` instead
-   */
-  receive(abortCtrl?: AbortController) {
-    return this.get(abortCtrl);
-  }
-
-  /**
    * Closes the channel.
    *
    * Closing a closed channel have no effect (positive or negative).
@@ -246,7 +239,7 @@ export class Channel<T> implements AsyncIterable<T> {
    * Sending a message to a closed channel will throw an `AbortedError`.
    *
    * Receiving a message from a closed channel will resolve the promise immediately.
-   * See `Channel.receive` for more information.
+   * See `Channel.get` for more information.
    */
   close() {
     this.#state = this.#state.close();

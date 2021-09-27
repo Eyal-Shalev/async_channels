@@ -33,8 +33,8 @@ export function application(
         Channel.from(Deno.serveHttp(conn)).forEach((ev) => {
           appCh.send(ev)
             .catch(logErrCtx("send(Deno.RequestEvent)", ev));
-        }).receive().catch(logErrCtx("Deno.serveHttp(conn)", conn));
-      }).receive().catch(logErrCtx("Deno.listen(options)", listenOpts));
+        }).get().catch(logErrCtx("Deno.serveHttp(conn)", conn));
+      }).get().catch(logErrCtx("Deno.listen(options)", listenOpts));
       appCh.close();
     } catch (e) {
       logErr("listenAndServe(options)", listenOpts, e);

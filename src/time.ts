@@ -121,7 +121,7 @@ export class Timer {
    * For example, assuming the program has not received from t.C already:
    *
    *     if (!t.stop()) {
-   *       await t.c.receive()
+   *       await t.c.get()
    *     }
    *
    * This cannot be done concurrent to other receives from the Timer's
@@ -154,7 +154,7 @@ export class Timer {
    * before being stopped—the channel explicitly drained:
    *
    *     if (!t.stop()) {
-   *       await t.c.receive()
+   *       await t.c.get()
    *     }
    *     t.reset(d)
    *
