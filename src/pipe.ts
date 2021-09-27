@@ -37,7 +37,7 @@ export function map<T, TOut>(
     );
     (async () => {
       while (true) {
-        const res = await target.receive(makeAbortCtrl(signal));
+        const res = await target.get(makeAbortCtrl(signal));
         if (!res[1]) return;
         await outChan.send(await fn(res[0]), makeAbortCtrl(signal));
       }
@@ -59,7 +59,7 @@ export function flat<TElem>(
     );
     (async () => {
       while (true) {
-        const res = await target.receive(makeAbortCtrl(signal));
+        const res = await target.get(makeAbortCtrl(signal));
         if (!res[1]) return;
 
         for await (const item of res[0]) {
@@ -86,7 +86,7 @@ export function flatMap<T, TOut>(
     );
     (async () => {
       while (true) {
-        const res = await target.receive(makeAbortCtrl(signal));
+        const res = await target.get(makeAbortCtrl(signal));
         if (!res[1]) return;
         for await (const item of fn(res[0])) {
           await outChan.send(item, makeAbortCtrl(signal));
@@ -111,7 +111,7 @@ export function forEach<T>(
     );
     (async () => {
       while (true) {
-        const res = await target.receive(makeAbortCtrl(signal));
+        const res = await target.get(makeAbortCtrl(signal));
         if (!res[1]) return;
         await fn(res[0]);
       }
@@ -131,7 +131,7 @@ export function filter<T>(
     const outChan = new Channel<T>(bufferSize ?? target.bufferSize, options);
     (async () => {
       while (true) {
-        const res = await target.receive(makeAbortCtrl(signal));
+        const res = await target.get(makeAbortCtrl(signal));
         if (!res[1]) return;
         if (!(await fn(res[0]))) continue;
         await outChan.send(res[0], makeAbortCtrl(signal));
@@ -154,12 +154,12 @@ export function reduce<T>(
     (async () => {
       let prev: T;
 
-      const res = await target.receive(makeAbortCtrl(signal));
+      const res = await target.get(makeAbortCtrl(signal));
       if (!res[1]) return;
       prev = res[0];
 
       while (true) {
-        const res = await target.receive(makeAbortCtrl(signal));
+        const res = await target.get(makeAbortCtrl(signal));
         if (!res[1]) {
           return await outChan.send(prev, makeAbortCtrl(signal));
         }
@@ -191,7 +191,7 @@ export function groupBy<T, TKey extends (string | symbol)>(
 
     (async () => {
       while (true) {
-        const res = await target.receive(makeAbortCtrl(signal));
+        const res = await target.get(makeAbortCtrl(signal));
         if (!res[1]) return;
         const key = await fn(res[0]);
         await out[key].send(res[0], makeAbortCtrl(signal));
@@ -239,7 +239,7 @@ export function duplicate<T>(n = 2, pipeOpts?: ChannelDuplicateOptions) {
 
     (async () => {
       while (true) {
-        const res = await target.receive(makeAbortCtrl(signal));
+        const res = await target.get(makeAbortCtrl(signal));
         if (!res[1]) return;
 
         switch (sendMode) {

@@ -11,7 +11,7 @@ bench({
     setTimeout(() => {
       c.send(1);
     });
-    await c.receive();
+    await c.get();
     c.close();
 
     b.stop();

@@ -234,7 +234,7 @@ router.get("/api/queues/:name", async (ctx: RouterContext) => {
   const [queue] = queueTuple;
 
   try {
-    const [msg, ok] = await queue.receive(ctrl);
+    const [msg, ok] = await queue.get(ctrl);
     ctx.assert(ok, Status.Gone, "queue is closed");
 
     ctx.response.body = JSON.stringify(msg);

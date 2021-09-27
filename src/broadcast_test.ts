@@ -71,11 +71,11 @@ Deno.test("WaitForOne", async () => {
   const [aSub] = bcast.subscribe("A");
   const [allSub] = bcast.subscribeFn(() => true);
 
-  const waitForA = aSub.receive();
+  const waitForA = aSub.get();
   await bcast.send("A");
   assertEquals(await waitForA, ["A", true]);
 
-  const waitForB = allSub.receive();
+  const waitForB = allSub.get();
   await bcast.send("B");
   assertEquals(await waitForB, ["B", true]);
 
@@ -90,13 +90,13 @@ Deno.test("WaitForAll", async () => {
   const [allSub] = bcast.subscribeFn(() => true);
 
   const waitForA = Promise.all([
-    aSub.receive(),
-    allSub.receive(),
+    aSub.get(),
+    allSub.get(),
   ]);
   await bcast.send("A");
   assertEquals(await waitForA, [["A", true], ["A", true]]);
 
-  const waitForB = allSub.receive();
+  const waitForB = allSub.get();
   await bcast.send("B");
   assertEquals(await waitForB, ["B", true]);
 
@@ -114,12 +114,12 @@ Deno.test("unsubscribe (topic)", async () => {
   const [allSub] = bcast.subscribeFn(() => true);
   aUnsub();
 
-  const waitForA = allSub.receive();
+  const waitForA = allSub.get();
 
   await bcast.send("A");
 
   assertEquals(await waitForA, ["A", true]);
-  assertEquals(await aSub.receive(), [undefined, false]);
+  assertEquals(await aSub.get(), [undefined, false]);
 });
 
 Deno.test("unsubscribe (topicFn)", async () => {
@@ -129,10 +129,10 @@ Deno.test("unsubscribe (topicFn)", async () => {
   const [allSub, allUnsub] = bcast.subscribeFn(() => true);
   allUnsub();
 
-  const waitForA = aSub.receive();
+  const waitForA = aSub.get();
   await bcast.send("A");
   assertEquals(await waitForA, ["A", true]);
-  assertEquals(await allSub.receive(), [undefined, false]);
+  assertEquals(await allSub.get(), [undefined, false]);
 });
 
 Deno.test("isBroadcastSendMode", () => {

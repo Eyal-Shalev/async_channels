@@ -1,29 +1,29 @@
 import { sleep } from "./internal/utils.ts";
 import { Channel, SendOnClosedError } from "./channel.ts";
 import { assertEquals, assertThrowsAsync, fail } from "deno/testing/asserts.ts";
-Deno.test("no-buffer receive -> send", async () => {
+Deno.test("no-buffer get-> send", async () => {
   const chan = new Channel<string>(0);
   assertEquals(
-    await Promise.all([chan.receive(), chan.send("a")]),
+    await Promise.all([chan.get(), chan.send("a")]),
     [["a", true], undefined],
   );
 });
 
-Deno.test("no-buffer send -> receive", async () => {
+Deno.test("no-buffer send -> get", async () => {
   const chan = new Channel<string>(0);
 
   assertEquals(
-    await Promise.all([chan.send("a"), chan.receive()]),
+    await Promise.all([chan.send("a"), chan.get()]),
     [undefined, ["a", true]],
   );
 });
 
-Deno.test("no-buffer receive -> receive -> send -> send", async () => {
+Deno.test("no-buffer get-> get -> send -> send", async () => {
   const chan = new Channel<string>(0);
 
   const [getA, getB, ..._] = await Promise.all([
-    chan.receive(),
-    chan.receive(),
+    chan.get(),
+    chan.get(),
     chan.send("a"),
     chan.send("b"),
   ]);
@@ -32,86 +32,86 @@ Deno.test("no-buffer receive -> receive -> send -> send", async () => {
   assertEquals(getB, ["b", true]);
 });
 
-Deno.test("no-buffer send -> send -> receive -> receive", async () => {
+Deno.test("no-buffer send -> send -> get -> get", async () => {
   const chan = new Channel<string>(0);
 
   const [_a, _b, getA, getB] = await Promise.all([
     chan.send("a"),
     chan.send("b"),
-    chan.receive(),
-    chan.receive(),
+    chan.get(),
+    chan.get(),
   ]);
 
   assertEquals(getA, ["a", true]);
   assertEquals(getB, ["b", true]);
 });
 
-Deno.test("no-buffer send -> receive; receive -> send", async () => {
+Deno.test("no-buffer send -> get; get-> send", async () => {
   const chan = new Channel<string>(0);
 
-  const [_a, getA] = await Promise.all([chan.send("a"), chan.receive()]);
-  const [getB, _b] = await Promise.all([chan.receive(), chan.send("b")]);
+  const [_a, getA] = await Promise.all([chan.send("a"), chan.get()]);
+  const [getB, _b] = await Promise.all([chan.get(), chan.send("b")]);
 
   assertEquals(getA, ["a", true]);
   assertEquals(getB, ["b", true]);
 });
 
-Deno.test("buffered send -> receive", async () => {
+Deno.test("buffered send -> get", async () => {
   const chan = new Channel<string>(1);
 
   await chan.send("a");
-  assertEquals(await chan.receive(), ["a", true]);
+  assertEquals(await chan.get(), ["a", true]);
 });
 
-Deno.test("buffered send -> send -> receive -> receive", async () => {
+Deno.test("buffered send -> send -> get -> get", async () => {
   const chan = new Channel<string>(1);
 
   await chan.send("a");
 
-  const [_b, getA] = await Promise.all([chan.send("b"), chan.receive()]);
+  const [_b, getA] = await Promise.all([chan.send("b"), chan.get()]);
   assertEquals(getA, ["a", true]);
-  assertEquals(await chan.receive(), ["b", true]);
+  assertEquals(await chan.get(), ["b", true]);
 });
 
-Deno.test("buffered send -> receive; receive -> send", async () => {
+Deno.test("buffered send -> get; get-> send", async () => {
   const chan = new Channel<string>(1);
 
   await chan.send("a");
-  assertEquals(await chan.receive(), ["a", true]);
+  assertEquals(await chan.get(), ["a", true]);
   await chan.send("b");
-  assertEquals(await chan.receive(), ["b", true]);
+  assertEquals(await chan.get(), ["b", true]);
 });
 
-Deno.test("buffered send -> send -> send -> receive -> receive -> receive", async () => {
+Deno.test("buffered send -> send -> send -> get -> get -> get", async () => {
   const chan = new Channel<string>(2);
 
   await chan.send("a");
   await chan.send("b");
 
-  const [_c, getA] = await Promise.all([chan.send("c"), chan.receive()]);
+  const [_c, getA] = await Promise.all([chan.send("c"), chan.get()]);
   assertEquals(getA, ["a", true]);
 
-  assertEquals(await chan.receive(), ["b", true]);
-  assertEquals(await chan.receive(), ["c", true]);
+  assertEquals(await chan.get(), ["b", true]);
+  assertEquals(await chan.get(), ["c", true]);
 });
 
-Deno.test("send -> close -> receive -> receive", async () => {
+Deno.test("send -> close -> get -> get", async () => {
   const chan = new Channel<string>(1);
 
   await chan.send("a");
   chan.close();
 
-  assertEquals(await chan.receive(), ["a", true]);
-  assertEquals(await chan.receive(), [undefined, false]);
+  assertEquals(await chan.get(), ["a", true]);
+  assertEquals(await chan.get(), [undefined, false]);
 });
 
-Deno.test("send -> close -> receive -> send", async () => {
+Deno.test("send -> close -> get -> send", async () => {
   const chan = new Channel<string>(1);
 
   await chan.send("a");
   chan.close();
 
-  assertEquals(await chan.receive(), ["a", true]);
+  assertEquals(await chan.get(), ["a", true]);
   assertThrowsAsync(() => chan.send("b"), SendOnClosedError);
 });
 
@@ -239,8 +239,8 @@ Deno.test("pipeline", async () => {
     [1, 2, 3, 4, 5, 6].map((x) => ch.send(x)),
   ).then(() => ch.close());
 
-  assertEquals(await pipeCh.receive(), [36, true]);
-  assertEquals(await pipeCh.receive(), [undefined, false]);
+  assertEquals(await pipeCh.get(), [36, true]);
+  assertEquals(await pipeCh.get(), [undefined, false]);
 
   await p;
 });
@@ -254,9 +254,9 @@ Deno.test("Channel.from", async () => {
   }());
 
   for (const expected of [0, 1, 2]) {
-    const [actual] = await ch.receive();
+    const [actual] = await ch.get();
     assertEquals(actual, expected);
   }
 
-  assertEquals(await ch.receive(), [undefined, false]);
+  assertEquals(await ch.get(), [undefined, false]);
 });

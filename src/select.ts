@@ -76,7 +76,7 @@ export async function select<T, TDefault = never>(
  *   If default is provided and no operation was ready, then the tuple
  *   `[default, undefined]` is returned.
  *
- *   If a `receive` operation is completed, then the tuple `[T, Receiver<T>]`
+ *   If a `get` operation is completed, then the tuple `[T, Receiver<T>]`
  *   is returned (where `T` is the value received, and `Receiver<T>` is the
  *   receiver channel that returned it).
  *
@@ -96,7 +96,7 @@ export async function select<T, TDefault = never>(
   const abortCtrl = options?.abortCtrl || new AbortController();
   const selectPromises: Promise<void | T | undefined>[] = ops.map((item) => {
     if (isReceiver(item)) {
-      return item.receive(abortCtrl).then(([val]) => val);
+      return item.get(abortCtrl).then(([val]) => val);
     }
     return item[0].send(item[1], abortCtrl);
   });

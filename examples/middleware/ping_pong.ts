@@ -75,7 +75,7 @@ const pingMsgsCh = pingPostCh.map(async (ev) => {
 
 // For each pong GET request, respond with a message that was consumed from pingMsgsCh.
 pongGetCh.forEach(async (ev) => {
-  const [blob] = await pingMsgsCh.receive();
+  const [blob] = await pingMsgsCh.get();
   if (blob) ev.respondWith(new Response(blob)).catch(logErrCtx("pongGetCh"));
   else internalServerError("ping channel closed")(ev);
 });
@@ -91,7 +91,7 @@ const pongMsgsCh = pongPostCh.map(async (ev) => {
 
 // For each ping GET request, respond with a message that was consumed from pongMsgsCh.
 pingGetCh.forEach(async (ev) => {
-  const [blob] = await pongMsgsCh.receive();
+  const [blob] = await pongMsgsCh.get();
   if (blob) ev.respondWith(new Response(blob)).catch(logErrCtx("pingGetCh"));
   else internalServerError("ping channel closed")(ev);
 });
