@@ -1,8 +1,6 @@
 import { sleep } from "./internal/utils.ts";
-import { Channel } from "./channel.ts";
-import { InvalidTransitionError } from "./internal/state-machine.ts";
+import { Channel, SendOnClosedError } from "./channel.ts";
 import { assertEquals, assertThrowsAsync, fail } from "deno/testing/asserts.ts";
-
 Deno.test("no-buffer receive -> send", async () => {
   const chan = new Channel<string>(0);
   assertEquals(
@@ -114,18 +112,19 @@ Deno.test("send -> close -> receive -> send", async () => {
   chan.close();
 
   assertEquals(await chan.receive(), ["a", true]);
-  assertThrowsAsync(() => chan.send("b"), InvalidTransitionError);
+  assertThrowsAsync(() => chan.send("b"), SendOnClosedError);
 });
+
 Deno.test("send -> close -> send", async () => {
   const chan = new Channel<string>(1);
 
   await chan.send("a");
   chan.close();
 
-  assertThrowsAsync(() => chan.send("b"), InvalidTransitionError);
+  assertThrowsAsync(() => chan.send("b"), SendOnClosedError);
 });
 
-Deno.test("channel as an async iterator", async () => {
+Deno.test("Channel as an async iterator", async () => {
   const chan = new Channel<string>(1);
 
   const out: string[] = [];
@@ -167,7 +166,6 @@ Deno.test("map", async () => {
 });
 
 Deno.test("flat", async () => {
-  await 0;
   const ch = new Channel<string[]>();
   const flatCh = ch.flat();
   const p = Promise.all([

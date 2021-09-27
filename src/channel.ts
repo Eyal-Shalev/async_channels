@@ -1,18 +1,20 @@
 import { AbortedError } from "./internal/errors.ts";
 import { Queue } from "./internal/queue.ts";
 import {
-  Closed,
   Idle,
-  ReceiveStuck,
-  SendStuck,
+  InvalidTransitionError,
+  isClosed,
+  isGetStuck,
+  isIdle,
+  isSendStuck,
+  SendOnClosedError,
   State,
-  Transition,
-  WaitingForAck,
-} from "./internal/state-machine.ts";
+} from "./internal/state_machine.ts";
 import {
   ignoreAbortedError,
   isNonNegativeSafeInteger,
   makeAbortCtrl,
+  raceAbort,
 } from "./internal/utils.ts";
 import {
   ChannelDuplicateOptions,
@@ -25,34 +27,12 @@ import {
   groupBy,
   map,
   reduce,
+  subscribe,
   SubscribeOptions,
+  SubscribeReturnType,
 } from "./pipe.ts";
-import { subscribe, SubscribeReturnType } from "./subscribe.ts";
 
-export { AbortedError };
-export { InvalidTransitionError } from "./internal/state-machine.ts";
-
-const eventType = (x: Transition | State): string => {
-  return typeof x === "string" ? `Transition::${x}` : `State::${x.name}`;
-};
-
-class ValEvent<T> extends Event {
-  constructor(type: string, readonly val?: T, eventInitDict?: EventInit) {
-    super(type, eventInitDict);
-  }
-}
-
-class TransitionEvent<T> extends ValEvent<T> {
-  constructor(readonly t: Transition, val?: T, eventInitDict?: EventInit) {
-    super(eventType(t), val, eventInitDict);
-  }
-}
-
-class StateEvent<T> extends ValEvent<T> {
-  constructor(readonly state: State, val?: T, eventInitDict?: EventInit) {
-    super(eventType(state), val, eventInitDict);
-  }
-}
+export { AbortedError, InvalidTransitionError, SendOnClosedError };
 
 /**
  * Extra options for new channels.
@@ -91,11 +71,8 @@ export interface ClosedReceiver extends Receiver<unknown> {
  * @template T The type of value that can be sent to or received by this channel.
  */
 export class Channel<T> implements AsyncIterable<T> {
-  protected currentVal?: T;
-  protected current: State = Idle;
-  protected transitionEventTarget = new EventTarget();
-  protected stateEventTarget = new EventTarget();
-  protected readonly queue: Queue<T>;
+  #queue: Queue<T>;
+  #state: State<T>;
 
   /**
    * Constructs a new Channel with an optional buffer.
@@ -111,146 +88,13 @@ export class Channel<T> implements AsyncIterable<T> {
     if (!isNonNegativeSafeInteger(bufferSize)) {
       throw new TypeError("bufferSize must be a safe non-negative integer.");
     }
-    this.queue = new Queue<T>(bufferSize);
-    if (options?.debug) {
-      const reporter = (ev: Event) => {
-        this.debug(ev.type, { val: (ev as ValEvent<T>).val });
-      };
-      Object.values(Transition).forEach((t) => {
-        this.transitionEventTarget.addEventListener(eventType(t), reporter);
-      });
-
-      [Idle, ReceiveStuck, SendStuck, WaitingForAck].forEach((state) => {
-        this.stateEventTarget.addEventListener(eventType(state), reporter);
-      });
-    }
-  }
-
-  /**
-   * Closes the channel.
-   *
-   * Closing a closed channel have no effect (positive or negative).
-   *
-   * Sending a message to a closed channel will throw an `AbortedError`.
-   *
-   * Receiving a message from a closed channel will resolve the promise immediately.
-   * See `Channel.receive` for more information.
-   */
-  public close() {
-    this.updateState(Transition.CLOSE);
-  }
-
-  /**
-   * Receive returns a promise that will be resolved with `[T, true]` when a value is available, or rejected if a
-   * provided `AbortController` is aborted
-   *
-   * If the channel is closed, then the promise will be resolved immediately with `[undefined, false]`.
-   *
-   * Receiving from a closed channel:
-   * ```ts
-   *   import {Channel} from "./channel.ts";
-   *   const ch = new Channel();
-   *   ch.close();
-   *   const [val, ok] = await ch.receive()
-   *   console.assert(val === undefined)
-   *   console.assert(ok === false)
-   * ```
-   *
-   * Receiving from a buffered channel:
-   * ```ts
-   *   import {Channel} from "./channel.ts";
-   *   const ch = new Channel(1);
-   *   await ch.send("Hello world!")
-   *   ch.close();
-   *   const [val, ok] = await ch.receive()
-   *   console.assert(val === "Hello world!")
-   *   console.assert(ok === true)
-   * ```
-   *
-   * Aborting a receive request:
-   * ```ts
-   *   import {Channel, AbortedError} from "./channel.ts";
-   *   const ch = new Channel(1);
-   *   await ch.send("Hello world!")
-   *   ch.close();
-   *   const abortCtrl = new AbortController()
-   *   abortCtrl.abort()
-   *   try {
-   *     await ch.receive(abortCtrl);
-   *     console.assert(false, "unreachable");
-   *   } catch (e) {
-   *     console.assert(e instanceof AbortedError);
-   *   }
-   * ```
-   *
-   * @param {AbortController} [abortCtrl]
-   *   When provided `receive` will `abort` the controller when a value is available.
-   *   But if the controller is aborted before that, the promise returned by `receive` will be rejected.
-   * @returns {Promise<[T, true] | [undefined, false]>}
-   *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
-   */
-  public async receive(
-    abortCtrl?: AbortController,
-  ): Promise<[T, true] | [undefined, false]> {
-    this.debug("receive()");
-    const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
-
-    if ([ReceiveStuck, WaitingForAck].includes(this.current)) {
-      await (abortPromise
-        ? Promise.race([
-          this.waitForState(Idle, Closed),
-          abortPromise,
-        ])
-        : this.waitForState(Idle, Closed));
-    }
-
-    if (abortCtrl?.signal.aborted) {
-      this.debug("receive() aborted");
-      throw new AbortedError("receive");
-    }
-
-    if ([Idle, Closed].includes(this.current) && !this.queue.isEmpty) {
-      abortCtrl?.abort();
-      return [this.queue.remove(), true];
-    }
-
-    if (this.current === Closed) {
-      abortCtrl?.abort();
-      return [undefined, false];
-    }
-
-    // Register to the WaitingForAck event before transitioning to guarantee order.
-    const waitForAckPromise = this.waitForState(WaitingForAck, Closed);
-
-    this.updateState(Transition.RECEIVE);
-    const val =
-      await (abortPromise
-        ? Promise.race([waitForAckPromise, abortPromise])
-        : waitForAckPromise);
-
-    if (abortCtrl?.signal.aborted) {
-      this.debug("receive() aborted");
-      throw new AbortedError("receive");
-    }
-
-    if (this.current === Closed) {
-      abortCtrl?.abort();
-      return [undefined, false];
-    }
-
-    abortCtrl?.abort();
-    this.updateState(Transition.ACK);
-
-    if (this.queue.isEmpty) return [val as T, true];
-
-    const valToReturn = this.queue.remove();
-    this.queue.add(val as T);
-    return [valToReturn, true];
+    this.#state = Idle(this.debug.bind(this));
+    this.#queue = new Queue<T>(bufferSize);
   }
 
   /**
    * Sends a value on the channel, and returns a promise that will be resolved when a the value is received (see
-   * `Channel.receive`), or rejected if a provided `AbortController` is aborted.
+   * `Channel.get`), or rejected if a provided `AbortController` is aborted.
    *
    * If the channel is closed, then the promise will be rejected with an `InvalidTransitionError`.
    *
@@ -275,63 +119,137 @@ export class Channel<T> implements AsyncIterable<T> {
    * @returns {Promise<void>}
    *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
    */
-  public async send(val: T, abortCtrl?: AbortController): Promise<void> {
+  async send(val: T, abortCtrl?: AbortController): Promise<void> {
     this.debug("send(val)", { val });
-    const abortPromise = abortCtrl && makeAbortPromise(abortCtrl);
-
-    // If the channel state is stuck in another send, wait for the state to
-    // change into Idle and try again.
-    if ([SendStuck, WaitingForAck].includes(this.current)) {
-      await (abortPromise
-        ? Promise.race([this.waitForState(Idle), abortPromise])
-        : this.waitForState(Idle));
-
-      if (abortCtrl?.signal.aborted) {
-        this.debug("send(val) aborted", { val });
-        throw new AbortedError("send");
-      }
-      if (this.current !== Idle) return this.send(val);
+    if (abortCtrl?.signal?.aborted) throw new AbortedError("send");
+    if (isClosed(this.#state)) throw new SendOnClosedError();
+    if (isSendStuck(this.#state)) {
+      await raceAbort(this.#state.promise, "send", abortCtrl?.signal);
+      return this.send(val, abortCtrl);
     }
 
-    if (abortCtrl?.signal.aborted) {
-      this.debug("send(val) aborted", { val });
-      throw new AbortedError("send");
-    }
-
-    if (this.current === Idle && !this.queue.isFull) {
+    if (isIdle(this.#state) && !this.#queue.isFull) {
       abortCtrl?.abort();
-      this.queue.add(val);
+      this.#queue.add(val);
       return;
     }
 
-    // Register to the ReceiveStuck event before transitioning to guarantee order.
-    const receiveStuckPromise = this.current === ReceiveStuck
-      ? Promise.resolve()
-      : this.waitForState(ReceiveStuck);
-
-    this.updateState(Transition.SEND, val);
-    if (this.current === Idle) {
+    if (isGetStuck(this.#state)) {
       abortCtrl?.abort();
+      this.#state = this.#state.send(val);
       return;
     }
 
-    // Register to the Idle event before transitioning to guarantee order.
-    const waitForIdlePromise = this.waitForState(Idle);
-    await (abortPromise
-      ? Promise.race([receiveStuckPromise, abortPromise])
-      : receiveStuckPromise);
-
-    if (abortCtrl?.signal.aborted) {
-      this.debug("send(val) aborted", { val });
-      throw new AbortedError("send");
-    }
+    this.#state = this.#state.send(val);
+    await raceAbort(this.#state.promise, "send", abortCtrl?.signal);
     abortCtrl?.abort();
+  }
 
-    if (this.current === ReceiveStuck) {
-      this.updateState(Transition.SEND, val);
+  /**
+   * `get` returns a promise that will be resolved with `[T, true]` when a value is available, or rejected if a
+   * provided `AbortController` is aborted.
+   *
+   * If the channel is closed, then the promise will be resolved immediately with `[undefined, false]`.
+   *
+   * Receiving from a closed channel:
+   * ```ts
+   *   import {Channel} from "./channel.ts";
+   *   const ch = new Channel();
+   *   ch.close();
+   *   const [val, ok] = await ch.get()
+   *   console.assert(val === undefined)
+   *   console.assert(ok === false)
+   * ```
+   *
+   * Receiving from a buffered channel:
+   * ```ts
+   *   import {Channel} from "./channel.ts";
+   *   const ch = new Channel(1);
+   *   await ch.send("Hello world!")
+   *   ch.close();
+   *   const [val, ok] = await ch.get()
+   *   console.assert(val === "Hello world!")
+   *   console.assert(ok === true)
+   * ```
+   *
+   * Aborting a receive request:
+   * ```ts
+   *   import {Channel, AbortedError} from "./channel.ts";
+   *   const ch = new Channel(1);
+   *   await ch.send("Hello world!")
+   *   ch.close();
+   *   const abortCtrl = new AbortController()
+   *   abortCtrl.abort()
+   *   try {
+   *     await ch.get(abortCtrl);
+   *     console.assert(false, "unreachable");
+   *   } catch (e) {
+   *     console.assert(e instanceof AbortedError);
+   *   }
+   * ```
+   *
+   * @param {AbortController} [abortCtrl]
+   *   When provided `receive` will `abort` the controller when a value is available.
+   *   But if the controller is aborted before that, the promise returned by `receive` will be rejected.
+   * @returns {Promise<[T, true] | [undefined, false]>}
+   *   will be resolved when message was passed, or rejected if `abortCtrl` was aborted or the channel is closed.
+   */
+  async get(
+    abortCtrl?: AbortController,
+  ): Promise<[T, true] | [undefined, false]> {
+    this.debug("get()");
+    if (abortCtrl?.signal?.aborted) throw new AbortedError("get");
+    if (isGetStuck(this.#state)) {
+      await raceAbort(this.#state.promise, "get", abortCtrl?.signal);
+      return this.get(abortCtrl);
     }
 
-    await waitForIdlePromise;
+    if (isSendStuck(this.#state)) {
+      abortCtrl?.abort();
+      const valP = this.#state.promise;
+      this.#state = this.#state.get();
+      const val = await valP;
+      if (this.#queue.isEmpty) return [val, true];
+      const valFromQueue = this.#queue.remove();
+      this.#queue.add(val);
+      return [valFromQueue, true];
+    }
+
+    if (!this.#queue.isEmpty) {
+      abortCtrl?.abort();
+      return [this.#queue.remove(), true];
+    }
+
+    if (isClosed(this.#state)) {
+      abortCtrl?.abort();
+      return [undefined, false];
+    }
+
+    this.#state = this.#state.get();
+    const res = await raceAbort(this.#state.promise, "get", abortCtrl?.signal);
+    abortCtrl?.abort();
+    return res;
+  }
+
+  /**
+   * @deprecated use `Channel.get()` instead
+   */
+  receive(abortCtrl?: AbortController) {
+    return this.get(abortCtrl);
+  }
+
+  /**
+   * Closes the channel.
+   *
+   * Closing a closed channel have no effect (positive or negative).
+   *
+   * Sending a message to a closed channel will throw an `AbortedError`.
+   *
+   * Receiving a message from a closed channel will resolve the promise immediately.
+   * See `Channel.receive` for more information.
+   */
+  close() {
+    this.#state = this.#state.close();
   }
 
   /**
@@ -340,7 +258,7 @@ export class Channel<T> implements AsyncIterable<T> {
    */
   public async *[Symbol.asyncIterator](): AsyncGenerator<T, void, void> {
     while (true) {
-      const res = await this.receive();
+      const res = await this.get();
       if (!res[1]) return;
       yield res[0];
     }
@@ -357,7 +275,7 @@ export class Channel<T> implements AsyncIterable<T> {
    * const resCh = srcCh.with(map(n => n * 2));
    * await srcCh.send(5);
    * srcCh.close();
-   * console.assert(await resCh.receive() === [10, true]);
+   * console.assert(await resCh.get() === [10, true]);
    * ```
    *
    * @param {(ch: typeof this) => TOut} fn
@@ -418,7 +336,7 @@ export class Channel<T> implements AsyncIterable<T> {
    * @param {ChannelPipeOptions} [options]
    */
   flat<K>(
-    this: Channel<Iterable<K> | AsyncIterable<K>>,
+    this: Receiver<Iterable<K> | AsyncIterable<K>>,
     pipeOpts?: ChannelPipeOptions,
   ): Receiver<K> {
     return this.with(flat(pipeOpts));
@@ -478,10 +396,10 @@ export class Channel<T> implements AsyncIterable<T> {
    * @param {number} [n=2] A safe interger larger than 1.
    * @param {number} [bufferSize]
    * @param {ChannelDuplicateOptions} [pipeOpts]
-   * @returns {Channel<T>[]}
+   * @returns {Receiver<T>[]}
    * @throws {TypeError | RangeError}
    */
-  duplicate(n = 2, pipeOpts?: ChannelDuplicateOptions): Channel<T>[] {
+  duplicate(n = 2, pipeOpts?: ChannelDuplicateOptions): Receiver<T>[] {
     return this.with(duplicate(n, pipeOpts));
   }
 
@@ -511,69 +429,21 @@ export class Channel<T> implements AsyncIterable<T> {
     return outChan;
   }
 
-  /**
-   * @throws {InvalidTransitionError}
-   */
-  protected updateState(t: Transition, val?: T): void {
-    this.debug(`updateState(${t}, ${val})`);
-    this.currentVal = val;
-    this.current = this.current(t);
-    this.transitionEventTarget.dispatchEvent(
-      new TransitionEvent(t, val),
-    );
-    this.stateEventTarget.dispatchEvent(
-      new StateEvent(this.current, val),
-    );
-  }
-
-  protected waitForState(...states: State[]): Promise<T | undefined> {
-    this.debug(`waitForState(${states.map((s) => s.name).join(", ")})`);
-    if (states.includes(this.current)) {
-      return Promise.resolve<T | undefined>(this.currentVal);
-    }
-    return new Promise<T | undefined>((resolve) => {
-      states.forEach((state) => {
-        this.stateEventTarget.addEventListener(eventType(state), (ev) => {
-          // Resolve the promise in a scheduled-task, so the code that waits for
-          // it won't run in the current (or upcoming) micro-task.
-          scheduleTask(() => {
-            resolve((ev as ValEvent<T>).val);
-          });
-        }, { once: true });
-      });
-    });
-  }
-
   error(...args: unknown[]) {
     console.error(...args, {
-      currentState: this.current.name,
-      currentVal: this.currentVal,
-      ...(this.options?.debugExtra ?? {}),
+      [Symbol.for("time")]: new Date(),
+      [Symbol.for("state")]: this.#state.name,
+      ...this.options?.debugExtra,
     });
   }
 
   debug(...args: unknown[]) {
     if (this.options?.debug) {
       console.debug(...args, {
-        currentState: this.current.name,
-        currentVal: this.currentVal,
-        ...(this.options?.debugExtra ?? {}),
+        [Symbol.for("time")]: new Date(),
+        [Symbol.for("state")]: this.#state.name,
+        ...this.options?.debugExtra,
       });
     }
   }
-}
-
-// Rename `setTimeout` to `scheduleTask` to explicitly state the usage.
-const scheduleTask = setTimeout;
-
-function makeAbortPromise(abortCtrl: AbortController) {
-  if (abortCtrl.signal.aborted) return Promise.resolve();
-  return new Promise<void>((resolve) => {
-    abortCtrl.signal.addEventListener("abort", () => resolve());
-  });
-}
-
-export function isReceiver(x: unknown): x is Receiver<unknown> {
-  return x instanceof Object && "receive" in x &&
-    typeof x["receive"] === "function";
 }

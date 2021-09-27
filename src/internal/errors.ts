@@ -3,7 +3,7 @@
  * completion.
  */
 export class AbortedError extends Error {
-  constructor(type: "send" | "receive") {
+  constructor(type: "send" | "receive" | "get") {
     super(`${type} aborted`);
   }
 }

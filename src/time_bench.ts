@@ -2,6 +2,8 @@ import { bench, runBenchmarks } from "deno/testing/bench.ts";
 import { Ticker, timeout, Timer } from "./time.ts";
 
 [
+  [1, 1000],
+  [10, 100],
   [100, 10],
 ].forEach(([d, runs]) => {
   bench({
@@ -16,6 +18,8 @@ import { Ticker, timeout, Timer } from "./time.ts";
 });
 
 [
+  [1, 1000],
+  [10, 100],
   [100, 10],
 ].forEach(([d, runs]) => {
   bench({
@@ -30,6 +34,8 @@ import { Ticker, timeout, Timer } from "./time.ts";
 });
 
 [
+  [1, 1000],
+  [10, 100],
   [100, 10],
 ].forEach(([d, runs]) => {
   bench({
@@ -43,7 +49,9 @@ import { Ticker, timeout, Timer } from "./time.ts";
   });
 });
 [
-  [100, 2, 5],
+  [1, 9, 40],
+  [10, 6, 20],
+  [100, 3, 10],
 ].forEach(([d, times, runs]) => {
   bench({
     runs,

@@ -1,6 +1,6 @@
-import { Channel, isReceiver, Receiver, Sender } from "./channel.ts";
+import { Channel, Receiver, Sender } from "./channel.ts";
 import { BroadcastChannel } from "./broadcast.ts";
-import { sleep } from "./internal/utils.ts";
+import { isReceiver, sleep } from "./internal/utils.ts";
 
 /**
  * Extra options used for the `select` function.
