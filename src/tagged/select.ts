@@ -6,6 +6,8 @@ import {
   SelectOperation,
 } from "../select.ts";
 
+export type { SelectOperation };
+
 /**
  * A tagged-template version of select.
  *
@@ -82,7 +84,7 @@ export async function select(
   throw new UnreachableError();
 }
 
-type SelectHandler<T, TOut> = (val?: T) => TOut;
+export type SelectHandler<T, TOut> = (val?: T) => TOut;
 function isSelectHandler(x: unknown): x is SelectHandler<unknown, unknown> {
   return typeof x === "function";
 }
