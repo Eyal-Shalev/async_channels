@@ -1,5 +1,5 @@
-import { Receiver } from "../channel.ts";
-import { AbortedError } from "./errors.ts";
+import { Channel, Receiver, Sender } from "../channel.ts";
+import { AbortedError, UnreachableError } from "./errors.ts";
 
 export const sleep = (duration: number) => {
   return new Promise<void>((res) => {
@@ -55,9 +55,12 @@ export function isNonPositiveSafeInteger(x: unknown): x is number {
   return isSafeInteger(x) && x <= 0;
 }
 
+export function isSender(x: unknown): x is Sender<unknown> {
+  return x instanceof Channel;
+}
+
 export function isReceiver(x: unknown): x is Receiver<unknown> {
-  return x instanceof Object && "get" in x &&
-    typeof x["get"] === "function";
+  return x instanceof Channel;
 }
 
 export function raceAbort<T>(
@@ -94,7 +97,7 @@ export function deferPromise<T>(): [
     res = res2;
     rej = rej2;
   });
-  if (!res) throw new Error();
-  if (!rej) throw new Error();
+  if (!res) throw new UnreachableError();
+  if (!rej) throw new UnreachableError();
   return [p, res, rej];
 }

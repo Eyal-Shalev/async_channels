@@ -1,6 +1,6 @@
 import { Channel, Receiver, Sender } from "./channel.ts";
-import { BroadcastChannel } from "./broadcast.ts";
-import { isReceiver, sleep } from "./internal/utils.ts";
+import { UnreachableError } from "./internal/errors.ts";
+import { isReceiver, isSender, sleep } from "./internal/utils.ts";
 
 /**
  * Extra options used for the `select` function.
@@ -10,19 +10,30 @@ export interface SelectOptions<TDefault = never> {
   abortCtrl?: AbortController;
 }
 
+export type SelectGetOperation<T> = Receiver<T>;
+export type SelectSendOperation<T> = [Sender<T>, T];
+
 export type SelectOperation<T> =
-  | Receiver<T>
-  | [Sender<T>, T]
-  | [BroadcastChannel<T, unknown>, T];
+  | SelectGetOperation<T>
+  | SelectSendOperation<T>;
 export type SelectDefaultResult<T> = [T, undefined];
 export type SelectOperationResult<T> =
   | [T, Receiver<T>]
-  | [true, Sender<T>]
-  | [true, BroadcastChannel<T, unknown>];
+  | [true, Sender<T>];
 export type SelectResult<T, TDefault> = (
   | SelectOperationResult<T>
   | SelectDefaultResult<TDefault>
 );
+
+export function isSelectSendOperation(
+  x: unknown,
+): x is SelectSendOperation<unknown> {
+  return Array.isArray(x) && x.length === 2 && isSender(x[0]);
+}
+
+export function isSelectOperation(x: unknown): x is SelectOperation<unknown> {
+  return isReceiver(x) || isSelectSendOperation(x);
+}
 
 export async function select(
   ops: [],
@@ -125,5 +136,5 @@ export async function select<T, TDefault = never>(
     return [options.default, undefined];
   }
 
-  throw new Error("Unreachable");
+  throw new UnreachableError();
 }
