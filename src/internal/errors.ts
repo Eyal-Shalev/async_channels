@@ -7,3 +7,9 @@ export class AbortedError extends Error {
     super(`${type} aborted`);
   }
 }
+
+export class UnreachableError extends Error {
+  constructor() {
+    super("You've reached an unreachable state, congratulations ¯\_(ツ)_/¯");
+  }
+}
