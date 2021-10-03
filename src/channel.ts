@@ -32,6 +32,7 @@ import {
   SubscribeReturnType,
 } from "./pipe.ts";
 
+export { UnreachableError } from "./internal/errors.ts";
 export { AbortedError, InvalidTransitionError, SendOnClosedError };
 
 /**
@@ -422,7 +423,10 @@ export class Channel<T> implements AsyncIterable<T> {
     return outChan;
   }
 
-  error(...args: unknown[]) {
+  /**
+   * @internal
+   */
+  error(...args: unknown[]): void {
     console.error(...args, {
       [Symbol.for("time")]: new Date(),
       [Symbol.for("state")]: this.#state.name,
@@ -430,7 +434,10 @@ export class Channel<T> implements AsyncIterable<T> {
     });
   }
 
-  debug(...args: unknown[]) {
+  /**
+   * @internal
+   */
+  debug(...args: unknown[]): void {
     if (this.options?.debug) {
       console.debug(...args, {
         [Symbol.for("time")]: new Date(),
