@@ -6,19 +6,17 @@ description: "Async Channels provides channels as a mechanism for synchronizing 
 permalink: /
 ---
 
-# Async Channels {: .fs-9 }
+# Async Channels
 
-Synchronizing asynchronous functions {: .fs-6 .fw-300 }
+Synchronizing asynchronous functions
 
-[Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0
-.mr-2 } [View it on GitHub](https://github.com/Eyal-Shalev/async_channels){:
-.btn .fs-5 .mb-4 .mb-md-0 }
+[Get started now](#getting-started){: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
+[View it on GitHub](https://github.com/Eyal-Shalev/async_channels){: .btn .mb-4
+.mb-md-0 }
 
 ## Getting Started
 
 Async Channels has zero dependencies.
-
-### Setup
 
 - Install via `npm` (or `yarn`)
   [@eyalsh/async_channels](https://npmjs.com/package/@eyalsh/async_channels)\
