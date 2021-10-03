@@ -20,10 +20,10 @@ Auto generated API documentation
 
 **[src/pipe.ts](https://doc.deno.land/https/deno.land/x/async_channels/src/pipe.ts)**
 
-**[src/select_template.ts](https://doc.deno.land/https/deno.land/x/async_channels/src/select_template.ts)**
-
 **[src/select.ts](https://doc.deno.land/https/deno.land/x/async_channels/src/select.ts)**
 
 **[src/subscribe.ts](https://doc.deno.land/https/deno.land/x/async_channels/src/subscribe.ts)**
 
 **[src/time.ts](https://doc.deno.land/https/deno.land/x/async_channels/src/time.ts)**
+
+**[src/tagged/select.ts](https://doc.deno.land/https/deno.land/x/async_channels/src/tagged/select.ts)**
