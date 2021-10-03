@@ -10,6 +10,12 @@ import { after } from "./time.ts";
 import { select } from "./select_template.ts";
 import { assertLessThan } from "./internal/test_utils.ts";
 
+Deno.test("invalid select", async () => {
+  await assertRejects(() => select`case ${() => {}}: ${() => {}}`);
+  await assertRejects(() => select`case ${new Channel()}: ${new Channel()}`);
+  await assertRejects(() => select`default: ${new Channel()}`);
+});
+
 Deno.test("select receiver", async () => {
   const namesCh = new Channel<string>();
   const p1 = select`
