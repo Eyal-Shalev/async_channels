@@ -8,10 +8,10 @@ permalink: /
 
 # Async Channels
 
-Synchronizing asynchronous functions [Get started now](#getting-started){: .btn
-.btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[View it on GitHub](https://github.com/Eyal-Shalev/async_channels){: .btn .fs-5
-.mb-4 .mb-md-0 }
+Synchronizing asynchronous functions\
+[Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0
+.mr-2 } [View it on GitHub](https://github.com/Eyal-Shalev/async_channels){:
+.btn .fs-5 .mb-4 .mb-md-0 }
 
 ## Getting Started
 
