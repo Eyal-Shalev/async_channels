@@ -5,10 +5,10 @@ import {
   assertStrictEquals,
   fail,
 } from "deno/testing/asserts.ts";
-import { Channel } from "./channel.ts";
-import { after } from "./time.ts";
-import { select } from "./select_template.ts";
-import { assertLessThan } from "./internal/test_utils.ts";
+import { Channel } from "../channel.ts";
+import { after } from "../time.ts";
+import { select } from "./select.ts";
+import { assertLessThan } from "../internal/test_utils.ts";
 
 Deno.test("invalid select", async () => {
   await assertRejects(() => select`case ${() => {}}: ${() => {}}`);

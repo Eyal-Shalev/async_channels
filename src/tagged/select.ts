@@ -1,10 +1,10 @@
-import { Receiver, Sender } from "./channel.ts";
-import { UnreachableError } from "./internal/errors.ts";
+import { Receiver, Sender } from "../channel.ts";
+import { UnreachableError } from "../internal/errors.ts";
 import {
   isSelectOperation,
   select as realSelect,
   SelectOperation,
-} from "./select.ts";
+} from "../select.ts";
 
 /**
  * import { Channel } from "./channel.ts";
