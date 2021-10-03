@@ -1,4 +1,4 @@
-import { Channel } from "https://unpkg.com/@eyalsh/async_channels@1.0.0-beta2/dist/async_channels.esm.js";
+import { Channel } from "https://cdn.skypack.dev/@eyalsh/async_channels@^1.0.0-beta4?dts";
 
 const input = new Channel();
 

@@ -10,6 +10,6 @@ export class AbortedError extends Error {
 
 export class UnreachableError extends Error {
   constructor() {
-    super("You've reached an unreachable state, congratulations 🎉");
+    super("You've reached an unreachable state, congratulations ¯\_(ツ)_/¯");
   }
 }
