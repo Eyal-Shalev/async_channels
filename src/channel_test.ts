@@ -1,6 +1,16 @@
 import { sleep } from "./internal/utils.ts";
 import { Channel, SendOnClosedError } from "./channel.ts";
-import { assertEquals, assertThrowsAsync, fail } from "deno/testing/asserts.ts";
+import {
+  assertEquals,
+  assertThrows,
+  assertThrowsAsync,
+  fail,
+} from "deno/testing/asserts.ts";
+
+Deno.test("invalid bufferSize", () => {
+  assertThrows(() => new Channel(-1), RangeError);
+});
+
 Deno.test("no-buffer get-> send", async () => {
   const chan = new Channel<string>(0);
   assertEquals(

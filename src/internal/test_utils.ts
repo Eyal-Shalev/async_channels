@@ -1,6 +1,7 @@
 import { _format, AssertionError } from "deno/testing/asserts.ts";
 export { sleep } from "./utils.ts";
 
+/** @internal */
 export function assertNumberBetween(
   actual: number,
   min: number,
@@ -15,6 +16,7 @@ export function assertNumberBetween(
   if (actual >= max) throw new AssertionError(msg);
 }
 
+/** @internal */
 export function assertLessThan(
   actual: number,
   max: number,
