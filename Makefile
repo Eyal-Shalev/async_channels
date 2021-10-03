@@ -95,7 +95,7 @@ install-esbuild: check-npm
 	npm i -g esbuild
 
 clean:
-	rm -rf dist coverage
+	rm -rf dist coverage package.json
 
 clearscr:
 	clear
