@@ -13,6 +13,10 @@ Channels are queue-like objects _(First In First Out)_ that their `enqueue`
 between asynchronous functions we can synchronize operations between said
 functions.
 
+[Get started now](#getting-started){: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
+[View it on GitHub](https://github.com/Eyal-Shalev/async_channels){: .btn .mb-4
+.mb-md-0 }
+
 **Example:**
 
 ```js
@@ -54,10 +58,6 @@ export function counter(stop) {
   return res;
 }
 ```
-
-[Get started now](#getting-started){: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
-[View it on GitHub](https://github.com/Eyal-Shalev/async_channels){: .btn .mb-4
-.mb-md-0 }
 
 ## Getting Started
 
