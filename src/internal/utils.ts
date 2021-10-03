@@ -1,12 +1,14 @@
 import { Channel, Receiver, Sender } from "../channel.ts";
 import { AbortedError, UnreachableError } from "./errors.ts";
 
+/** @internal */
 export const sleep = (duration: number) => {
   return new Promise<void>((res) => {
     setTimeout(() => res(), duration);
   });
 };
 
+/** @internal */
 export function recordWithDefaults<TKey extends string | symbol, TVal>(
   record: Record<TKey, TVal>,
   fn: (prop: TKey) => TVal,
@@ -21,11 +23,13 @@ export function recordWithDefaults<TKey extends string | symbol, TVal>(
   });
 }
 
+/** @internal */
 export function ignoreAbortedError(err: unknown): Promise<void> {
   if (err instanceof AbortedError) return Promise.resolve();
   return Promise.reject(err);
 }
 
+/** @internal */
 export function makeAbortCtrl(
   signal: AbortSignal | undefined,
 ): AbortController | undefined {
@@ -35,34 +39,32 @@ export function makeAbortCtrl(
   return ctrl;
 }
 
+/** @internal */
 export function isSafeInteger(x: unknown): x is number {
   return Number.isSafeInteger(x);
 }
 
+/** @internal */
 export function isPositiveSafeInteger(x: unknown): x is number {
   return isSafeInteger(x) && x > 0;
 }
 
-export function isNegativeSafeInteger(x: unknown): x is number {
-  return isSafeInteger(x) && x < 0;
-}
-
+/** @internal */
 export function isNonNegativeSafeInteger(x: unknown): x is number {
   return isSafeInteger(x) && x >= 0;
 }
 
-export function isNonPositiveSafeInteger(x: unknown): x is number {
-  return isSafeInteger(x) && x <= 0;
-}
-
+/** @internal */
 export function isSender(x: unknown): x is Sender<unknown> {
   return x instanceof Channel;
 }
 
+/** @internal */
 export function isReceiver(x: unknown): x is Receiver<unknown> {
   return x instanceof Channel;
 }
 
+/** @internal */
 export function raceAbort<T>(
   p: Promise<T>,
   type: "send" | "get",
@@ -75,6 +77,7 @@ export function raceAbort<T>(
   ]);
 }
 
+/** @internal */
 export function makeAbortPromise(
   type: "send" | "get",
   signal: AbortSignal,
@@ -86,6 +89,7 @@ export function makeAbortPromise(
   });
 }
 
+/** @internal */
 export function deferPromise<T>(): [
   Promise<T>,
   (_: T | PromiseLike<T>) => void,

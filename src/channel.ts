@@ -87,7 +87,7 @@ export class Channel<T> implements AsyncIterable<T> {
     protected readonly options?: ChannelOptions,
   ) {
     if (!isNonNegativeSafeInteger(bufferSize)) {
-      throw new TypeError("bufferSize must be a safe non-negative integer.");
+      throw new RangeError("bufferSize must be a safe non-negative integer.");
     }
     this.#state = Idle(this.debug.bind(this));
     this.#queue = new Queue<T>(bufferSize);
@@ -131,7 +131,7 @@ export class Channel<T> implements AsyncIterable<T> {
 
     if (isIdle(this.#state) && !this.#queue.isFull) {
       abortCtrl?.abort();
-      this.#queue.add(val);
+      this.#queue.enqueue(val);
       return;
     }
 
@@ -211,14 +211,14 @@ export class Channel<T> implements AsyncIterable<T> {
       this.#state = this.#state.get();
       const val = await valP;
       if (this.#queue.isEmpty) return [val, true];
-      const valFromQueue = this.#queue.remove();
-      this.#queue.add(val);
+      const valFromQueue = this.#queue.dequeue();
+      this.#queue.enqueue(val);
       return [valFromQueue, true];
     }
 
     if (!this.#queue.isEmpty) {
       abortCtrl?.abort();
-      return [this.#queue.remove(), true];
+      return [this.#queue.dequeue(), true];
     }
 
     if (isClosed(this.#state)) {
