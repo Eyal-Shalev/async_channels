@@ -7,15 +7,21 @@ import {
 } from "../select.ts";
 
 /**
- * import { Channel } from "./channel.ts";
- * import { select } from "./selectTemplate.ts";
- * const ch1 = new Channel<string>()
- * const ch2 = new Channel<string>()
+ * A tagged-template version of select.
+ *
+ * Format:
+ * ```ts
+ * import {Channel} from "../channel.ts";
+ * import {select} from "./select.ts";
+ * const ch1 = new Channel();
+ * const ch2 = new Channel();
  * const res = await select`
- *   case ${ch1}: $((x: string) => `ch1 got ${x}`)
- *   case ${[ch2, "greet"]}: $(() => console.log("sent greet"))
- *   default: $(() => console.log("no channel is ready"))
- * `;
+ *   case ${ch1}: ${(val) => "Will be called if ch1 was sent val"}
+ *   case ${[ch2, "val"]}: ${() => "Will be called if ch2 accepted 'val'"}
+ *   default: ${() => "Will be called if no other channel is ready for get / send"}
+ * `
+ * console.log(res)
+ * ```
  */
 export async function select(
   strings: TemplateStringsArray,
