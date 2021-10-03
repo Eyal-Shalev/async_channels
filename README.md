@@ -6,9 +6,7 @@ description: "Async Channels provides channels as a mechanism for synchronizing 
 permalink: /
 ---
 
-# Async Channels
-
-{: .fs-9 }
+# Async Channels {: .fs-9 }
 
 Synchronizing asynchronous functions {: .fs-6 .fw-300 }
 
