@@ -17,6 +17,11 @@ functions.
 [View it on GitHub](https://github.com/Eyal-Shalev/async_channels){: .btn .mb-4
 .mb-md-0 }
 
+## Table of contents
+
+1. TOC
+{:toc}
+
 **Example:**
 
 ```js
