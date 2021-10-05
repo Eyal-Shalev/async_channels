@@ -7,6 +7,7 @@ permalink: /
 ---
 
 # Async Channels
+{: .no_toc}
 
 Channels are queue-like objects _(First In First Out)_ that their `enqueue`
 (put) and `dequeue` (get) functions are asynchronous (`async`). By passing them
@@ -18,11 +19,12 @@ functions.
 .mb-md-0 }
 
 ## Table of contents
+{: .no_toc }
 
 1. TOC
 {:toc}
 
-**Example:**
+## Example:
 
 ```js
 // main.js
