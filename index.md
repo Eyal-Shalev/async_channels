@@ -294,6 +294,7 @@ const input = new Channel();
 (async () => {
   let cont = true;
   while (cont) {
+    // Because the handler for `done` is executed inside a function, you cannot `return` or `break` from it.
     await select`
       case ${done}: ${() => cont = false}
       case ${input}: ${(val) => console.log("Got:", val)}
