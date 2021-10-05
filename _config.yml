@@ -4,6 +4,8 @@ color_scheme: "light"
 search_enabled: false
 permalink: pretty
 
+aux_links_new_tab: true
+
 back_to_top: true
 back_to_top_text: "Back to top"
 
@@ -12,7 +14,7 @@ kramdown:
     block:
       line_numbers: false
 
-footer_content: "Distributed by a <a href=\"https://github.com/Eyal-Shalev/async_channels/tree/master/LICENSE.txt\">GPL 3+ Licence</a>."
+footer_content: "Distributed by a <a href=\"https://github.com/Eyal-Shalev/async_channels/tree/master/LICENSE.txt\">GPL 3+ License</a>."
 
 # Footer last edited timestamp
 last_edit_timestamp: true # show or hide edit time - page must have `last_modified_date` defined in the frontmatter
