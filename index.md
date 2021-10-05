@@ -7,6 +7,7 @@ permalink: /
 ---
 
 # Async Channels
+
 {: .no_toc}
 
 Channels are queue-like objects _(First In First Out)_ that their `enqueue`
@@ -125,8 +126,8 @@ export function counter(stop) {
     are logged.\
     _Used for debugging the library._
 
-  - `options.debugExtra`: a `key-value` record that is used for logging debug and
-    error information.\
+  - `options.debugExtra`: a `key-value` record that is used for logging debug
+    and error information.\
     _Used for debugging the library._
 
   ```js
@@ -165,8 +166,8 @@ export function counter(stop) {
 - **`Channel.from(input, options)`**
 
   This is useful when you already have an `Iterable` (or `AsyncIterable`), and
-  want to consume it in it's entierty, such that all the messages are sent to the
-  new channel.
+  want to consume it in it's entierty, such that all the messages are sent to
+  the new channel.
 
   ```js
   import { Channel } from "...";
@@ -228,7 +229,7 @@ Note: `Channel.from(...)` and the built-in pipe functions will close the channel
 when they are done consuming the input. If the input was another Channel, then
 you have to close the input channel, for that to happen.
 
-Example:
+**Example:**
 
 ```js
 import { Channel } from "...";
@@ -243,6 +244,75 @@ input.close();
 console.log(await p);
 // => .forEach() was resolved
 // => [undefined, false]
+```
+
+### Selecting a Channel operation
+
+Sometimes we want to race several channel operations against each other, and
+select the first operation completed (aborting the other operations).
+
+To do that, `async_channels` provides the `select` function (and `select` tagged
+template)
+
+**Example (function):**
+
+```js
+import { Channel, select } from "...";
+const done = new Channel();
+const input = new Channel();
+
+(async () => {
+  while (true) {
+    const [val, ch] = await select([done, input]);
+    if (ch === done) return;
+    console.log("Got: ", val);
+  }
+})().finally(() => console.log("Loop completed"));
+
+await input.send("Hello"); // => Got: Hello
+await input.send("world"); // => Got: world
+done.close();
+
+// This will not resolve, because no one is waiting for values from input.
+const p = input.send("goodbye").catch((e) =>
+  console.log("Expected error caught:", e.message)
+);
+
+// This will cause the above `input.send()` to reject.
+input.close(); // => Expected error caught: Send on closed channel
+await p; // => Loop completed
+```
+
+**Example (tagged template):**
+
+```js
+import { Channel, tagged } from "...";
+const { select } = tagged;
+const done = new Channel();
+const input = new Channel();
+
+(async () => {
+  let cont = true;
+  while (cont) {
+    await select`
+      case ${done}: ${() => cont = false}
+      case ${input}: ${(val) => console.log("Got:", val)}
+    `;
+  }
+})().finally(() => console.log("Loop completed"));
+
+await input.send("Hello"); // => Got: Hello
+await input.send("world"); // => Got: world
+done.close();
+
+// This will not resolve, because no one is waiting for values from input.
+const p = input.send("goodbye").catch((e) =>
+  console.log("Expected error caught:", e.message)
+);
+
+// This will cause the above `input.send()` to reject.
+input.close(); // => Expected error caught: Send on closed channel
+await p; // => Loop completed
 ```
 
 ## API
