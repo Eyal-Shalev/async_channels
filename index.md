@@ -18,9 +18,6 @@ functions.
 [View it on GitHub](https://github.com/Eyal-Shalev/async_channels){: .btn .mb-4
 .mb-md-0 }
 
-## Table of contents
-{: .no_toc }
-
 <details open markdown="block">
   <summary>
     Table of contents
