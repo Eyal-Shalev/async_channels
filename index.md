@@ -96,7 +96,7 @@ export function counter(stop) {
 
 ### Creating Chanels
 
-#### `new Channel(bufferSize, options)`
+#### new Channel(bufferSize, options)
 
 The obvious way to create new channels, is with the `new` keyword.
 
@@ -152,7 +152,7 @@ console.log(await buffered.get());
 // => ["world", true]
 ```
 
-#### `Channel.from(input, options)`
+#### Channel.from(input, options)
 
 This is useful when you already have an `Iterable` (or `AsyncIterable`), and
 want to consume it in it's entierty, such that all the messages are sent to the
@@ -181,7 +181,7 @@ console.log(await fromAsyncIter.get()); // => [4, true]
 console.log(await fromAsyncIter.get()); // => [undefined, false]
 ```
 
-#### `.map`, `.filter`, `.forEach`, `...`
+#### .map, .filter, .forEach, ...
 
 Each channel comes with a set of pipeline methods (`map`, `filter`, `forEach`,
 ...). These methods will return a **new** channel that consumes the original
