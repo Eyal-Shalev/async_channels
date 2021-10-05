@@ -27,7 +27,7 @@ functions.
 {:toc}
 </details>
 
-## Example:
+## Example
 
 ```js
 // main.js
