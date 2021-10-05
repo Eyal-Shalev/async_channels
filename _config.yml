@@ -15,11 +15,5 @@ kramdown:
 footer_content: "Distributed by a <a href=\"https://github.com/Eyal-Shalev/async_channels/tree/master/LICENSE.txt\">GPL 3+ Licence</a>."
 
 compress_html:
-  clippings: all
-  comments: all
-  endings: all
-  startings: []
-  blanklines: false
-  profile: false
   ignore:
     envs: all
