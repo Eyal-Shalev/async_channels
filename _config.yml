@@ -3,6 +3,8 @@ remote_theme: pmarsceill/just-the-docs
 color_scheme: "light"
 search_enabled: false
 permalink: pretty
+baseurl: "/async_channels"
+url: "https://eyal-shalev.github.io"
 
 aux_links_new_tab: true
 
