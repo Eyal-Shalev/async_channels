@@ -78,7 +78,6 @@ await p; // => Loop completed
 
 <div class="d-flex flex-justify-start">
 
-[Previous - Closing Channels](/getting-started/closing-channels)
-{: .btn .mb-4 .mb-md-0 }
+[Previous - Closing Channels](/getting-started/closing-channels){: .btn .mb-4 .mb-md-0 }
 
 </div>
