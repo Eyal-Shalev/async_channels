@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Selecting a Channel operation
-permalink: /getting-started/select-channel-op.md
+permalink: /getting-started/select-channel-op
 parent: Getting Started
 nav_order: 4
 ---
