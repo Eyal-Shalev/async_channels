@@ -113,6 +113,6 @@ Below is an example usage that combines some of them.
     ```
 
 <span class="d-flex flex-justify-between">
-[Previous - Installation](/async_channels/getting-started/installation){: .btn .mb-4 .mb-md-0 }
+[Previous - Setup](/async_channels/getting-started/setup){: .btn .mb-4 .mb-md-0 }
 [Next - Closing Channels](/async_channels/getting-started/closing-channels){: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
 </span>
