@@ -38,3 +38,10 @@ nav_order: 1
       const {Channel} = async_channels;
     </script>
     ```
+
+<div class="d-flex flex-justify-between">
+[Previous - Getting Started](/getting-started)
+{: .btn .mb-4 .mb-md-0 }
+[Next - Creating Channels](/getting-started/creating-channels)
+{: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
+</div>

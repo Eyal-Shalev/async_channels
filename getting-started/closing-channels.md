@@ -40,3 +40,10 @@ console.log(await p);
 // => .forEach() was resolved
 // => [undefined, false]
 ```
+
+<div class="d-flex flex-justify-between">
+[Previous - Creating Channels](/getting-started/creating-channels)
+{: .btn .mb-4 .mb-md-0 }
+[Next - Selecting a Channel operation](/getting-started/select-channel-op)
+{: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
+</div>
