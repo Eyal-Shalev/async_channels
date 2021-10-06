@@ -14,6 +14,9 @@ aux_links:
     - "//github.com/Eyal-Shalev/async_channels"
   "API":
     - "//doc.deno.land/https/deno.land/x/async_channels/mod.ts"
+    - "//doc.deno.land/https/deno.land/x/async_channels/src/channel.ts"
+
+search_enabled: true
 
 compress_html:
   ignore:

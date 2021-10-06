@@ -3,6 +3,7 @@ layout: default
 title: Home
 description: "Async Channels provides channels as a mechanism for synchronizing asynchronous functions."
 permalink: /
+nav_order: 1
 ---
 
 # Async Channels
