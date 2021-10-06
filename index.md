@@ -7,7 +7,6 @@ nav_exclude: true
 ---
 
 # Async Channels
-
 {: .no_toc}
 
 Channels are queue-like objects _(First In First Out)_ that their `enqueue`
