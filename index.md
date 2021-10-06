@@ -56,6 +56,8 @@ export function counter(stop) {
 ```
 
 <div class="d-flex flex-justify-end">
+
 [Next - Getting Started](/getting-started)
 {: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
+
 </div>
