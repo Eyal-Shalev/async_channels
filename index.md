@@ -56,5 +56,6 @@ export function counter(stop) {
 ```
 
 <span class="d-flex flex-justify-end">
+[Next - Getting Started](/async_channels/getting-started){: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
 [Next - Getting Started](/getting-started){: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
 </span>
