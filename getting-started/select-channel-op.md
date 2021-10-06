@@ -77,7 +77,5 @@ await p; // => Loop completed
 ```
 
 <span class="d-flex flex-justify-start">
-
 [Previous - Closing Channels](/getting-started/closing-channels){: .btn .mb-4 .mb-md-0 }
-
 </span>

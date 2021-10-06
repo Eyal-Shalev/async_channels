@@ -113,8 +113,6 @@ Below is an example usage that combines some of them.
     ```
 
 <span class="d-flex flex-justify-between">
-
 [Previous - Installation](/getting-started/installation){: .btn .mb-4 .mb-md-0 }
 [Next - Closing Channels](/getting-started/closing-channels){: .btn .btn-primary .mb-4 .mb-md-0 .mr-2 }
-
 </span>
