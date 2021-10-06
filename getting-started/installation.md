@@ -12,10 +12,10 @@ nav_order: 1
 
 Released under both npmjs & github packages:
 
-[![npmjs.com:@eyalsh/async_channels](https://img.shields.io/badge/npmjs.com-%40eyalsh%2Fasync__channels-%23cc0000)](https://www.npmjs.com/package/@eyalsh/async_channels)
-{: }
-[![github.com:@Eyal-Shalev/async_channels](https://img.shields.io/badge/github.com-%40eyal--shalev%2Fasync__channels-%233399db)](https://github.com/Eyal-Shalev/async_channels/packages/983326)
-{: }
+[![npmjs.com:@eyalsh/async_channels](https://img.shields.io/badge/npmjs.com-%40eyalsh%2Fasync__channels-%23cc0000)](https://www.npmjs.com/package/@eyalsh/async_channels){:
+does-nothing}
+[![github.com:@Eyal-Shalev/async_channels](https://img.shields.io/badge/github.com-%40eyal--shalev%2Fasync__channels-%233399db)](https://github.com/Eyal-Shalev/async_channels/packages/983326){:
+does-nothing}
 
 **Install:**
 
@@ -69,6 +69,7 @@ import { Channel } from "https://cdn.skypack.dev/@eyalsh/async_channels";
 ```
 
 Or you can download compiled library from GitHub:
+
 - [Latest Release](://github.com/Eyal-Shalev/async_channels/releases/latest)
 - [All Releases](://github.com/Eyal-Shalev/async_channels/releases)
 
@@ -76,7 +77,9 @@ Or you can download compiled library from GitHub:
 import { Channel } from "/path/to/async_channels.esm.js";
 ```
 
-_Note: an IIFE version also exist, if your application doesn't support ES modules._
+_Note: an IIFE version also exist, if your application doesn't support ES
+modules._
+
 ```html
 <script src="/path/to/async_channels.iife.js"></script>
 <script>
