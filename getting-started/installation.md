@@ -13,9 +13,9 @@ nav_order: 1
 Released under both npmjs & github packages:
 
 [![npmjs.com:@eyalsh/async_channels](https://img.shields.io/badge/npmjs.com-%40eyalsh%2Fasync__channels-%23cc0000)](https://www.npmjs.com/package/@eyalsh/async_channels){:
-does-nothing}
+.does-nothing}
 [![github.com:@Eyal-Shalev/async_channels](https://img.shields.io/badge/github.com-%40eyal--shalev%2Fasync__channels-%233399db)](https://github.com/Eyal-Shalev/async_channels/packages/983326){:
-does-nothing}
+.does-nothing}
 
 **Install:**
 
