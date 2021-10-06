@@ -12,11 +12,9 @@ back_to_top: true
 back_to_top_text: "Back to top"
 
 aux_links:
-  "Async Channels on GitHub":
-    - "//github.com/Eyal-Shalev/async_channels"
+  "Async Channels on GitHub": "//github.com/Eyal-Shalev/async_channels"
   "API":
     - "//doc.deno.land/https/deno.land/x/async_channels/mod.ts"
-    - "//doc.deno.land/https/deno.land/x/async_channels/src/channel.ts"
 
 search_enabled: true
 
