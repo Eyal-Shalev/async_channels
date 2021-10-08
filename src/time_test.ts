@@ -1,23 +1,61 @@
 import { bench, runBenchmarks } from "deno/testing/bench.ts";
-import { after, tick, Ticker, timeout, Timer } from "./time.ts";
-import { assert, fail } from "deno/testing/asserts.ts";
+import { after, Ticker, timeout, Timer } from "./time.ts";
+import { assert, assertEquals, fail } from "deno/testing/asserts.ts";
 import { assertLessThan, assertNumberBetween } from "./internal/test_utils.ts";
 import { select } from "./select.ts";
 
 Deno.test("Timer", async () => {
-  for (const duration of [50, 100, 200]) {
-    const start = new Date();
-    const t = new Timer(duration);
-    const [val] = await t.c.get();
-    const end = new Date();
-    if (!val) fail("unreachable");
-    assertNumberBetween(end.getTime() - val.getTime(), 0, 11);
-    assertNumberBetween(
-      val.getTime() - start.getTime(),
-      duration,
-      duration + 6,
-    );
-  }
+  const start = new Date();
+  const t = new Timer(50);
+  let [val] = await t.c.get();
+  let end = new Date();
+  t.reset(50);
+  if (!val) fail("unreachable");
+  assertNumberBetween(end.getTime() - val.getTime(), 0, 11);
+  assertNumberBetween(
+    val.getTime() - start.getTime(),
+    50,
+    56,
+  );
+
+  [val] = await t.c.get();
+  end = new Date();
+  if (!val) fail("unreachable");
+  assertNumberBetween(end.getTime() - val.getTime(), 0, 11);
+  assertNumberBetween(
+    val.getTime() - start.getTime(),
+    100,
+    110,
+  );
+});
+
+Deno.test("Timer -> stop -> reset", async () => {
+  const start = new Date();
+  const t = new Timer(10);
+
+  assertEquals(t.stop(), true);
+
+  assertEquals(t.reset(0), false);
+
+  let [val] = await t.c.get();
+  if (!val) fail("unreachable");
+  assertLessThan(val.getTime() - start.getTime(), 15);
+
+  assertEquals(t.reset(0), false);
+
+  [val] = await t.c.get();
+  if (!val) fail("unreachable");
+  assertLessThan(val.getTime() - start.getTime(), 30);
+
+  assertEquals(t.stop(), false);
+
+  assertEquals(t.reset(0), false);
+
+  [val] = await t.c.get();
+  if (!val) fail("unreachable");
+  assertLessThan(val.getTime() - start.getTime(), 45);
+
+  assertEquals(t.stop(), false);
 });
 
 Deno.test("timeout", async () => {
@@ -49,9 +87,9 @@ Deno.test("timeout", async () => {
     },
   });
   const res = await runBenchmarks({ silent: true });
-  assertLessThan(res.results[0].measuredRunsAvgMs, 7);
-  assertLessThan(res.results[1].measuredRunsAvgMs, 15);
-  assertLessThan(res.results[2].measuredRunsAvgMs, 56);
+  assertLessThan(res.results[0].measuredRunsAvgMs, 10);
+  assertLessThan(res.results[1].measuredRunsAvgMs, 20);
+  assertLessThan(res.results[2].measuredRunsAvgMs, 60);
 });
 
 Deno.test("after", async () => {
@@ -91,23 +129,4 @@ Deno.test("Ticker", async () => {
   }
   ticker.stop();
   assert(expected.length === 0, `remaining items: ${String(expected)}`);
-});
-
-Deno.test({
-  name: "tick",
-  // This test is expected to leak ops because there is no way to stop `tick`.
-  sanitizeOps: false,
-  fn: async () => {
-    const expected = [50, 100, 150, 200];
-    const start = new Date();
-    for await (const cur of tick(50)) {
-      const expectedInterval = expected.shift();
-      if (expectedInterval === undefined) return;
-      assertNumberBetween(
-        cur.getTime() - start.getTime(),
-        expectedInterval,
-        expectedInterval + 10,
-      );
-    }
-  },
 });

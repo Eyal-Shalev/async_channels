@@ -78,6 +78,7 @@ export class Ticker {
    * @param {number} duration
    */
   reset(duration: number) {
+    this.#c.debug(`reset(${duration})`);
     console.assert(
       isPositiveSafeInteger(duration),
       "duration is a safe & postive integer",
@@ -85,10 +86,7 @@ export class Ticker {
     this.stop();
     this.intervalId = setInterval(() => {
       select([[this.#c, new Date()]], { default: void 0 })
-        .then(
-          (res) => this.#c.debug(res),
-          (e) => this.#c.error(e),
-        );
+        .catch((e) => this.#c.debug(e));
     }, duration);
   }
 }
@@ -134,6 +132,7 @@ export class Timer {
    * with f explicitly.
    */
   stop(): boolean {
+    this.#c.debug(`stop()`);
     if (this.ctrl.signal.aborted) return false;
     this.ctrl.abort();
     clearTimeout(this.timeoutId);
@@ -170,12 +169,14 @@ export class Timer {
    * @returns
    */
   reset(duration: number): boolean {
-    const wasAborted = this.ctrl?.signal.aborted;
+    this.#c.debug(`reset(${duration})`);
+    const wasActive = !this.ctrl?.signal.aborted;
     this.ctrl = new AbortController();
     this.timeoutId = setTimeout(() => {
-      this.#c.send(new Date(), this.ctrl).catch();
+      this.#c.send(new Date(), this.ctrl)
+        .catch((e) => this.#c.debug(e));
     }, duration);
-    return wasAborted;
+    return wasActive;
   }
 }
 
