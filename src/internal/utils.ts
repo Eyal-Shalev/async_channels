@@ -71,10 +71,7 @@ export function raceAbort<T>(
   signal?: AbortSignal,
 ) {
   if (!signal) return p;
-  return Promise.race([
-    p,
-    makeAbortPromise(type, signal),
-  ]);
+  return Promise.race([p, makeAbortPromise(type, signal)]);
 }
 
 /** @internal */

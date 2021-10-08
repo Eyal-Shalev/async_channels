@@ -2,6 +2,7 @@ import { sleep } from "./internal/utils.ts";
 import { Channel, SendOnClosedError } from "./channel.ts";
 import {
   assertEquals,
+  assertRejects,
   assertThrows,
   assertThrowsAsync,
   fail,
@@ -26,6 +27,20 @@ Deno.test("no-buffer send -> get", async () => {
     await Promise.all([chan.send("a"), chan.get()]),
     [undefined, ["a", true]],
   );
+});
+
+Deno.test("no-buffer get -> close", async () => {
+  const c = new Channel(0);
+  const p = c.get();
+  c.close();
+  assertEquals(await p, [undefined, false]);
+});
+
+Deno.test("no-buffer send -> close", async () => {
+  const c = new Channel(0);
+  const p = c.send("Hello world");
+  c.close();
+  await assertRejects(() => p, SendOnClosedError);
 });
 
 Deno.test("no-buffer get-> get -> send -> send", async () => {

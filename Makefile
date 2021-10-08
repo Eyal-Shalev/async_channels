@@ -32,10 +32,10 @@ lint: check-deno
 	deno lint src
 
 test: check-deno
-	deno test --unstable --lock=scripts/test-lock.json --import-map scripts/import_map.json --doc src --coverage=coverage/data
+	deno test --quiet --shuffle --unstable --reload=file://./src --lock=scripts/test-lock.json --import-map scripts/import_map.json --doc src --coverage=coverage/data
 
 test-watch:check-deno
-	deno test --unstable --lock=scripts/test-lock.json --import-map scripts/import_map.json --doc src --watch
+	deno test --quiet --shuffle --unstable --reload=file://./src --lock=scripts/test-lock.json --import-map scripts/import_map.json --doc src --watch
 
 coverage: test
 	deno coverage --unstable --exclude="test(_utils)?\.(js|mjs|ts|jsx|tsx)$$" coverage/data --lcov > coverage/profile.lcov
