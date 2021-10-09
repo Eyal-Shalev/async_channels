@@ -313,7 +313,13 @@ export class Channel<T> implements AsyncIterable<T> {
    * @param {ChannelPipeOptions} [options]
    */
   flatMap<TOut>(
-    fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
+    fn: (
+      val: T,
+    ) =>
+      | Iterable<TOut>
+      | AsyncIterable<TOut>
+      | Promise<Iterable<TOut>>
+      | Promise<AsyncIterable<TOut>>,
     pipeOpts?: ChannelPipeOptions,
   ): Receiver<TOut> {
     return this.with(flatMap(fn, pipeOpts));

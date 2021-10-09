@@ -75,7 +75,11 @@ export function flat<TElem>(
 }
 
 export function flatMap<T, TOut>(
-  fn: (val: T) => Iterable<TOut> | AsyncIterable<TOut>,
+  fn: (val: T) =>
+    | Iterable<TOut>
+    | AsyncIterable<TOut>
+    | Promise<Iterable<TOut>>
+    | Promise<AsyncIterable<TOut>>,
   pipeOpts?: ChannelPipeOptions,
 ) {
   return (target: Receiver<T>) => {
@@ -88,7 +92,7 @@ export function flatMap<T, TOut>(
       while (true) {
         const res = await target.get(makeAbortCtrl(signal));
         if (!res[1]) return;
-        for await (const item of fn(res[0])) {
+        for await (const item of await fn(res[0])) {
           await outChan.send(item, makeAbortCtrl(signal));
         }
       }
