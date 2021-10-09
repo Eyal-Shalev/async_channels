@@ -6,68 +6,88 @@
 [![nodejs minimum version](https://img.shields.io/node/v/@eyalsh/async_channels)](https://www.npmjs.com/package/@eyalsh/async_channels)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-Inspired by `Go` & `Clojure` Channels, `async_channels` provides channels as an
-asynchronous communication method between asynchronous functions.
+Channels are queue-like objects _(First In First Out)_ that their `enqueue`
+(send) and `dequeue` (get) functions are asynchronous (`async`). By passing them
+between asynchronous functions we can synchronize operations between said
+functions.
 
-## Installation
+## Setup
 
-### Vanilla JS (CDN)
-
-Import the module from one of the CDNs that mirror
-[npmjs.com](https://npmjs.com):
-
-- [skypack/@eyalsh/async_channels](https://skypack.dev/view/@eyalsh/async_channels)
-- [unpkg/@eyalsh/async_channels](https://unpkg.com/@eyalsh/async_channels/dist/async_channels.esm.js)
-
-```javascript
-import { Channel } from "https://cdn.skypack.dev/@eyalsh/async_channels";
-const ch = new Channel();
-// ...
-```
-
-### Vanilla JS (Download)
-
-A compiled version exists for every major dependency management system in the
-[releases section](https://github.com/Eyal-Shalev/async_channels/releases).\
-Download one of them and import it
-
-```javascript
-import { Channel } from "/path/to/async_channels.esm.js";
-const ch = new Channel();
-// ...
-```
-
-### NPM (ESM)
+### NodeJS
 
 Released under both npmjs & github packages:
 
-- [npmjs.com:@eyalsh/async_channels](https://www.npmjs.com/package/@eyalsh/async_channels)
-- [github.com:@Eyal-Shalev/async_channels](https://github.com/Eyal-Shalev/async_channels/packages/983326)
+[![npmjs.com:@eyalsh/async_channels](https://img.shields.io/badge/npmjs.com-%40eyalsh%2Fasync__channels-%23cc0000)](https://www.npmjs.com/package/@eyalsh/async_channels)
+[![github.com:@Eyal-Shalev/async_channels](https://img.shields.io/badge/github.com-%40eyal--shalev%2Fasync__channels-%233399db)](https://github.com/Eyal-Shalev/async_channels/packages/983326)
 
-```javascript
-import { Channel } from "@eyalsh/async_channels"; // or "@eyal-shalev/async_channels" for github packages.
-const ch = new Channel();
-// ...
+**Install:**
+
+<details open markdown="block">
+<summary>npm</summary>
+
+```shell
+npm install @eyalsh/async_channels
 ```
 
-### NPM (CommonJS)
+</details>
 
-Released under both npmjs & github packages:
+<details markdown="block">
+<summary>yarn</summary>
 
-- [npmjs.com:@eyalsh/async_channels](https://www.npmjs.com/package/@eyalsh/async_channels)
-- [github.com:@Eyal-Shalev/async_channels](https://github.com/Eyal-Shalev/async_channels/packages/983326)
+```shell
+yarn add @eyal-shalev/async_channels
+```
 
-```javascript
-const { Channel } = require("@eyalsh/async_channels"); // or "@eyal-shalev/async_channels" for github packages.
-const ch = new Channel();
-// ...
+</details>
+
+**import (ES Modules):**
+
+```js
+import { Channel } from "@eyalsh/async_channels";
+```
+
+**require (CommonJS):**
+
+```js
+const { Channel } = require("@eyalsh/async_channels");
 ```
 
 ### Deno
 
-```typescript
+The library is available to import from
+[deno.land/x/async_channels](://deno.land/x/async_channels)
+
+```ts
 import { Channel } from "https://deno.land/x/async_channels/mod.ts";
-const ch = new Channel<unknown>();
+```
+
+### Browser - CDN / Download
+
+You can import the library from any CDN that mirrors _npmjs.com_, such as
+[skypack.dev](://skypack.dev/view/@eyalsh/async_channels) or
+[unpkg.com](https://unpkg.com/@eyalsh/async_channels/dist/async_channels.esm.js).
+
+```js
+import { Channel } from "https://cdn.skypack.dev/@eyalsh/async_channels";
+```
+
+Or you can download compiled library from GitHub:
+
+- [Latest Release](://github.com/Eyal-Shalev/async_channels/releases/latest)
+- [All Releases](://github.com/Eyal-Shalev/async_channels/releases)
+
+```js
+import { Channel } from "/path/to/async_channels.esm.js";
+```
+
+_Note: an IIFE version also exist, if your application doesn't support ES
+modules._
+
+```html
+<script src="/path/to/async_channels.iife.js"></script>
+<script>
+  const {Channel} = async_channels;
+</script>
 ```
 
 ## Examples
@@ -76,11 +96,13 @@ const ch = new Channel<unknown>();
 
 - [pipeline (even or odd)](/examples/even-or-odd-pipeline)
 
+- [pipeline (lorem-ipsum)](/examples/lorem-ipsum-pipeline)
+
 - [Message Queue](/examples/message-queue)
 
 - [static site (todos app)](/examples/todos-static)
 
-- ```typescript
+- ```ts
   import { Channel, time } from "https://deno.land/x/async_channels/mod.ts";
 
   function produce(num: number) {
