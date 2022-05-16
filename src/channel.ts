@@ -50,11 +50,6 @@ export interface ChannelOptions {
    * When `debug` is `true`, this struct will be added to the debug messages.
    */
   debugExtra?: Record<string, unknown>;
-
-  /**
-   * Provide a custom logger - defaults to `console`
-   */
-  logger?: Console;
 }
 
 export type Closer = Pick<Channel<unknown>, "close">;
@@ -76,11 +71,9 @@ export interface ClosedReceiver extends Receiver<unknown> {
 /**
  * @template T The type of value that can be sent to or received by this channel.
  */
-export class Channel<T>
-  implements AsyncIterable<T>, AsyncIterator<T, void, void> {
+export class Channel<T> implements AsyncIterable<T> {
   #queue: Queue<T>;
   #state: State<T>;
-  #logger: Console;
 
   /**
    * Constructs a new Channel with an optional buffer.
@@ -90,7 +83,7 @@ export class Channel<T>
    * @param {ChannelOptions} [options]
    */
   constructor(
-    readonly bufferSize: number = 0,
+    readonly bufferSize = 0,
     protected readonly options?: ChannelOptions,
   ) {
     if (!isNonNegativeSafeInteger(bufferSize)) {
@@ -98,7 +91,6 @@ export class Channel<T>
     }
     this.#state = Idle(this.debug.bind(this));
     this.#queue = new Queue<T>(bufferSize);
-    this.#logger = options?.logger ?? console;
   }
 
   /**
@@ -264,31 +256,6 @@ export class Channel<T>
       if (!res[1]) return;
       yield res[0];
     }
-  }
-
-  /**
-   * Blocks until a value is available on the channel, or returns immedietly if the channel is closed.
-   */
-  public async next(): Promise<IteratorResult<T, void>> {
-    const [value, ok] = await this.get();
-    if (!ok) return { done: true, value: void 0 };
-    return { value, done: false };
-  }
-
-  /**
-   * Closes the channel, and returns an empty result.
-   */
-  public return() {
-    this.close();
-    return this.next();
-  }
-
-  /**
-   * Logs the error, closes the channel, and returns an empty result.
-   */
-  public throw(e?: unknown) {
-    this.error(e);
-    return this.return();
   }
 
   /**
@@ -466,7 +433,7 @@ export class Channel<T>
    * @internal
    */
   error(...args: unknown[]): void {
-    this.#logger.error(...args, {
+    console.error(...args, {
       [Symbol.for("time")]: new Date(),
       [Symbol.for("state")]: this.#state.name,
       ...this.options?.debugExtra,
@@ -478,7 +445,7 @@ export class Channel<T>
    */
   debug(...args: unknown[]): void {
     if (this.options?.debug) {
-      this.#logger.debug(...args, {
+      console.debug(...args, {
         [Symbol.for("time")]: new Date(),
         [Symbol.for("state")]: this.#state.name,
         ...this.options?.debugExtra,

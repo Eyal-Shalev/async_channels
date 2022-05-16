@@ -1,5 +1,4 @@
-import { AssertionError } from "deno/testing/asserts.ts";
-import { format } from "deno/testing/_format.ts";
+import { _format, AssertionError } from "deno/testing/asserts.ts";
 export { sleep } from "./utils.ts";
 
 /** @internal */
@@ -10,9 +9,9 @@ export function assertNumberBetween(
   msg?: string,
 ): void {
   msg = msg ||
-    `actual: "${format(actual)}" expected to be between "${
-      format(min)
-    }" (inclusive) and "${format(max)}" (exclusive)`;
+    `actual: "${_format(actual)}" expected to be between "${
+      _format(min)
+    }" (inclusive) and "${_format(max)}" (exclusive)`;
   if (actual < min) throw new AssertionError(msg);
   if (actual >= max) throw new AssertionError(msg);
 }
@@ -24,7 +23,7 @@ export function assertLessThan(
   msg?: string,
 ): void {
   msg = msg ||
-    `actual: ${format(actual)} >= ${format(max)},` +
-      `expected ${format(actual)} < ${format(max)}`;
+    `actual: ${_format(actual)} >= ${_format(max)},` +
+      `expected ${_format(actual)} < ${_format(max)}`;
   if (actual >= max) throw new AssertionError(msg);
 }

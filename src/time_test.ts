@@ -1,6 +1,8 @@
-import { after, Ticker, Timer } from "./time.ts";
+import { bench, runBenchmarks } from "deno/testing/bench.ts";
+import { after, Ticker, timeout, Timer } from "./time.ts";
 import { assert, assertEquals, fail } from "deno/testing/asserts.ts";
 import { assertLessThan, assertNumberBetween } from "./internal/test_utils.ts";
+import { select } from "./select.ts";
 
 Deno.test("Timer", async () => {
   const start = new Date();
@@ -56,6 +58,40 @@ Deno.test("Timer -> stop -> reset", async () => {
   assertEquals(t.stop(), false);
 });
 
+Deno.test("timeout", async () => {
+  bench({
+    name: "timeout(1)",
+    runs: 100,
+    func: async (b) => {
+      b.start();
+      await timeout(1).get();
+      b.stop();
+    },
+  });
+  bench({
+    name: "timeout(10)",
+    runs: 10,
+    func: async (b) => {
+      b.start();
+      await timeout(10).get();
+      b.stop();
+    },
+  });
+  bench({
+    name: "timeout(50)",
+    runs: 2,
+    func: async (b) => {
+      b.start();
+      await timeout(50).get();
+      b.stop();
+    },
+  });
+  const res = await runBenchmarks({ silent: true });
+  assertLessThan(res.results[0].measuredRunsAvgMs, 10);
+  assertLessThan(res.results[1].measuredRunsAvgMs, 20);
+  assertLessThan(res.results[2].measuredRunsAvgMs, 60);
+});
+
 Deno.test("after", async () => {
   const duration = 50;
   const start = new Date();
@@ -68,31 +104,29 @@ Deno.test("after", async () => {
   );
 });
 
-async function analyzeTicker(interval: number, times: number) {
-  const startMs = new Date().getTime();
-  const ticker = new Ticker(interval);
-  const results: number[] = [];
-  for (const _ of Array(times)) {
-    const [val, _] = await ticker.c.get();
-    assert(val);
-    results.push(val.getTime());
+Deno.test("Ticker", async () => {
+  const expected = [50, 100, 150, 200];
+  const start = new Date();
+  const ticker = new Ticker(50);
+  const done = timeout(201);
+  loop:
+  while (true) {
+    const res = await select([done, ticker.c]);
+    switch (res[1]) {
+      case done:
+        break loop;
+      case ticker.c: {
+        const cur = res[0];
+        const expectedInterval = expected.shift();
+        assert(expectedInterval !== undefined, "expected more intervals");
+        assertNumberBetween(
+          cur.getTime() - start.getTime(),
+          expectedInterval,
+          expectedInterval + 10,
+        );
+      }
+    }
   }
   ticker.stop();
-  const resultsWithStart = [startMs, ...results];
-  const intervals = results.map((next, index) =>
-    (next - resultsWithStart[index]) - interval
-  );
-
-  return {
-    avg: intervals.reduce((acc, item) => acc + item) / times,
-    min: Math.min(...intervals),
-    max: Math.max(...intervals),
-  };
-}
-
-Deno.test("Ticker", async () => {
-  const { avg, min, max } = await analyzeTicker(30, 50);
-  assertLessThan(avg, 2);
-  assertLessThan(min, 2);
-  assertLessThan(max, 3.01);
+  assert(expected.length === 0, `remaining items: ${String(expected)}`);
 });

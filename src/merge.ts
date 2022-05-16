@@ -53,7 +53,7 @@ export function merge<T>(
       }
     })()
   )).catch(ignoreAbortedError)
-    .catch((err) => outChan.error("merge", err))
+    .catch((err) => console.error("merge", err))
     .finally(() => outChan.close());
 
   return outChan;

@@ -2,9 +2,9 @@ import { sleep } from "./internal/utils.ts";
 import { Channel, SendOnClosedError } from "./channel.ts";
 import {
   assertEquals,
-  assertIsError,
   assertRejects,
   assertThrows,
+  assertThrowsAsync,
   fail,
 } from "deno/testing/asserts.ts";
 
@@ -137,7 +137,7 @@ Deno.test("send -> close -> get -> send", async () => {
   chan.close();
 
   assertEquals(await chan.get(), ["a", true]);
-  assertRejects(() => chan.send("b"), SendOnClosedError);
+  assertThrowsAsync(() => chan.send("b"), SendOnClosedError);
 });
 
 Deno.test("send -> close -> send", async () => {
@@ -146,79 +146,10 @@ Deno.test("send -> close -> send", async () => {
   await chan.send("a");
   chan.close();
 
-  assertRejects(() => chan.send("b"), SendOnClosedError);
+  assertThrowsAsync(() => chan.send("b"), SendOnClosedError);
 });
 
-Deno.test("Channel as an async iterator", async (t) => {
-  const generateContent = async (chan: Channel<string>) => {
-    for (const x of ["a", "b"]) {
-      await sleep(20);
-      await chan.send(x);
-    }
-  };
-  const generateBoo = (out: string[]) => sleep(30).then(() => out.push("boo"));
-  await t.step("read all", async () => {
-    const chan = new Channel<string>(1);
-
-    const out: string[] = [];
-
-    const p1 = generateContent(chan)
-      .catch((err) => fail(err))
-      .finally(() => chan.close());
-    const p2 = generateBoo(out);
-
-    for (let next = await chan.next(); !next.done; next = await chan.next()) {
-      out.push(next.value);
-    }
-
-    await p1;
-    await p2;
-
-    assertEquals(out, ["a", "boo", "b"]);
-  });
-  await t.step("return after 1", async () => {
-    const chan = new Channel<string>(1);
-    const p = chan.send("a")
-      .then(() => sleep(20))
-      .then(() => chan.send("b").catch(() => {}));
-
-    assertEquals(await chan.next(), { done: false, value: "a" });
-    assertEquals(await chan.return(), { done: true, value: void 0 });
-    assertEquals(await chan.next(), { done: true, value: void 0 });
-    await p;
-  });
-  await t.step("throw after 1", async () => {
-    const chan = new Channel<string>(1, {
-      logger: new Proxy<Console>(console, {
-        get(target, property, receiver) {
-          if (property === "error") {
-            return (...data: unknown[]) => {
-              assertEquals(data.length, 2);
-              const [error, _extra] = data;
-              assertIsError(error, Error, "Expected");
-            };
-          }
-          return Reflect.get(target, property, receiver);
-        },
-      }),
-    });
-
-    const p = chan.send("a")
-      .then(() => sleep(20))
-      .then(() => chan.send("b").catch(() => {}));
-
-    assertEquals(await chan.next(), { done: false, value: "a" });
-    assertEquals(await chan.throw(new Error("Expected")), {
-      done: true,
-      value: void 0,
-    });
-    assertEquals(await chan.next(), { done: true, value: void 0 });
-
-    await p;
-  });
-});
-
-Deno.test("Channel as an async iterable", async () => {
+Deno.test("Channel as an async iterator", async () => {
   const chan = new Channel<string>(1);
 
   const out: string[] = [];
