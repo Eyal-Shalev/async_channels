@@ -1,71 +1,81 @@
-import { bench, runBenchmarks } from "deno/testing/bench.ts";
+import { sleep } from "./internal/utils.ts";
 import { Ticker, timeout, Timer } from "./time.ts";
 
 [
-  [1, 1000],
-  [10, 100],
-  [100, 10],
-].forEach(([d, runs]) => {
-  bench({
-    runs,
+  1,
+  10,
+  100,
+].forEach((d) => {
+  Deno.bench({
+    name: `sleep(${d})`,
+    group: `Timer(${d})`,
+    fn: async () => {
+      await sleep(d);
+    },
+  });
+  Deno.bench({
     name: `Timer(${d})`,
-    func: async (b) => {
-      b.start();
+    group: `Timer(${d})`,
+    baseline: true,
+    fn: async () => {
       await new Timer(d).c.get();
-      b.stop();
     },
   });
 });
 
 [
-  [1, 1000],
+  1,
+  10,
+  100,
+].forEach((d) => {
+  Deno.bench({
+    name: `sleep(${d})`,
+    group: `timeout(${d})`,
+    fn: async () => {
+      await sleep(d);
+    },
+  });
+  Deno.bench({
+    name: `timeout(${d})`,
+    group: `timeout(${d})`,
+    baseline: true,
+    fn: async () => {
+      await timeout(d).get();
+    },
+  });
+});
+
+[
+  [10, 50],
   [10, 100],
   [100, 10],
-].forEach(([d, runs]) => {
-  bench({
-    runs,
-    name: `timeout(${d})`,
-    func: async (b) => {
-      b.start();
-      await timeout(d).get();
-      b.stop();
+].forEach(([interval, times]) => {
+  Deno.bench({
+    group: `Ticker(${interval}, ${times})`,
+    name: `setInterval(stopAfter${times}Times, ${interval})`,
+    fn: async () => {
+      await new Promise<void>((res) => {
+        let i = 0;
+        const id = setInterval(() => {
+          i += 1;
+          if (i >= times) {
+            clearInterval(id);
+            res();
+          }
+        }, interval);
+      });
+    },
+  });
+  Deno.bench({
+    group: `Ticker(${interval}, ${times})`,
+    name: `Ticker(${interval}, ${times})`,
+    baseline: true,
+    fn: async () => {
+      const ticker = new Ticker(interval);
+      for (const _ of Array(times)) {
+        await ticker.c.get();
+      }
+      ticker.stop();
     },
   });
 });
-
-[
-  [1, 1000],
-  [10, 100],
-  [100, 10],
-].forEach(([d, runs]) => {
-  bench({
-    runs,
-    name: `timeout(${d})`,
-    func: async (b) => {
-      b.start();
-      await timeout(d).get();
-      b.stop();
-    },
-  });
-});
-[
-  [1, 9, 40],
-  [10, 6, 20],
-  [100, 3, 10],
-].forEach(([d, times, runs]) => {
-  bench({
-    runs,
-    name: `Ticker(${d}) * ${times}`,
-    func: async (b) => {
-      b.start();
-
-      const t = new Ticker(d);
-      for (let i = 0; i < times; i++) await t.c.get();
-      t.stop();
-
-      b.stop();
-    },
-  });
-});
-
-await runBenchmarks();
