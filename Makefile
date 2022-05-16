@@ -17,6 +17,9 @@ check-rollup:
 	npm list -g typescript || npm list typescript
 	npm list -g rollup-plugin-dts || npm list rollup-plugin-dts
 
+check-nvm:
+	. ${NVM_DIR}/nvm.sh && nvm --version
+
 check-genhtml:
 	genhtml -v
 
@@ -96,6 +99,12 @@ post-build-test: check-node check-npm
 	node -e 'console.log(require("./dist/async_channels.cjs.js"))'
 
 install: install-esbuild install-rollup
+
+install-nvm:
+	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+
+install-node: check-nvm
+	. ${NVM_DIR}/nvm.sh && nvm install --lts
 
 install-rollup: check-npm
 	npm i -g rollup rollup-plugin-dts typescript
