@@ -46,8 +46,17 @@ coverage-html: coverage check-genhtml
 coverage-serve: coverage-html check-deno
 	deno run --allow-net="0.0.0.0:4507" --allow-read="." https://deno.land/std/http/file_server.ts coverage/html
 
-benchmark: check-deno
-	@for f in $(shell ls src/*_bench.ts); do deno run --lock=scripts/bench-lock.json --import-map scripts/import_map.json $${f}; done
+benchmark-write: check-deno
+	deno bench --unstable --no-check --quiet --import-map scripts/import_map.json > benchmark.out
+
+benchmark: benchmark-write
+	cat benchmark.out
+
+benchmark-txt: benchmark-write
+	cat benchmark.out | ansi2txt > benchmark.txt
+
+benchmark-html: benchmark-write
+	cat benchmark.out | ansi2html > benchmark.html
 
 package-json: check-deno
 	deno run --lock scripts/package-json-lock.json --import-map scripts/import_map.json --allow-env="SCOPE,VERSION" --allow-write="./package.json" scripts/package-json.ts
@@ -64,10 +73,10 @@ build: build-esm build-cjs build-iife
 
 build-esm: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.esm.js --format="esm" src/mod.ts
-	
+
 build-cjs: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.cjs.js --format=cjs src/mod.ts
-	
+
 build-iife: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.iife.js --format=iife --global-name=async_channels src/mod.ts
 
@@ -75,10 +84,10 @@ build-min: build-esm-min build-cjs-min build-iife-min
 
 build-esm-min: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.esm.min.js --format="esm" src/mod.ts
-	
+
 build-cjs-min: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.cjs.min.js --format=cjs src/mod.ts
-	
+
 build-iife-min: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.iife.min.js --format=iife --global-name=async_channels src/mod.ts
 
@@ -95,7 +104,7 @@ install-esbuild: check-npm
 	npm i -g esbuild
 
 clean:
-	rm -rf dist coverage package.json
+	rm -rf dist coverage package.json benchmark.txt benchmark.html
 
-clearscr:
+clear:
 	clear

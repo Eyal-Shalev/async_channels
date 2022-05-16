@@ -1,5 +1,4 @@
 import { Channel, ChannelOptions, Receiver } from "./channel.ts";
-import { select } from "./select.ts";
 import {
   isNonNegativeSafeInteger,
   isPositiveSafeInteger,
@@ -19,7 +18,8 @@ export class Ticker {
   readonly #c: Channel<Date>;
 
   // @ts-ignore strictPropertyInitialization - initialized in constructor using reset().
-  protected intervalId: number;
+  #intervalId: number;
+  #logger: Console;
 
   /**
    * constructs a new `Ticker` containing a channel that will send the time on the channel
@@ -52,6 +52,7 @@ export class Ticker {
    */
   constructor(duration: number, options?: ChannelOptions) {
     this.#c = new Channel<Date>(1, options);
+    this.#logger = options?.logger ?? console;
     this.reset(duration);
   }
 
@@ -69,7 +70,7 @@ export class Ticker {
    * @returns
    */
   stop() {
-    clearInterval(this.intervalId);
+    clearInterval(this.#intervalId);
   }
 
   /**
@@ -79,14 +80,13 @@ export class Ticker {
    */
   reset(duration: number) {
     this.#c.debug(`reset(${duration})`);
-    console.assert(
+    this.#logger.assert(
       isPositiveSafeInteger(duration),
       "duration is a safe & postive integer",
     );
     this.stop();
-    this.intervalId = setInterval(() => {
-      select([[this.#c, new Date()]], { default: void 0 })
-        .catch((e) => this.#c.debug(e));
+    this.#intervalId = setInterval(() => {
+      this.#c.send(new Date()).catch((e) => this.#c.debug(e));
     }, duration);
   }
 }
@@ -193,7 +193,7 @@ export class Timer {
  *     time.timeout(10 * time.Duration.Second),
  *   ]);
  *   if (res[1] !== ch) throw new Error("foo timed out");
- *   return res[0];
+ *   return res[0] as T;
  * }
  * ```
  * @param {number} duration A safe and non-negative integer.
@@ -203,7 +203,8 @@ export const timeout = (
   duration: number,
   options?: ChannelOptions,
 ): Receiver<void> => {
-  console.assert(
+  const logger = options?.logger ?? console;
+  logger.assert(
     isNonNegativeSafeInteger(duration),
     "duration is a safe non-negative integer",
   );
@@ -227,7 +228,7 @@ export const timeout = (
  *     time.after(10 * time.Duration.Second),
  *   ]);
  *   if (res[1] !== ch) throw new Error(`foo timed out at: ${res[0]}`);
- *   return res[0];
+ *   return res[0] as T;
  * }
  * ```
  * @param {number} duration A non-negative safe integer.
