@@ -98,7 +98,7 @@ jobs:
 
   publish:
     name: Publish
-    needs: [test, build-npm]
+    needs: [test, build-npm, version]
     strategy:
       matrix:
         registry: [npmjs, github]
