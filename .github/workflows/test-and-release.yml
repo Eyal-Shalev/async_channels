@@ -141,7 +141,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-iife:
-    needs: [version]
     runs-on: ubuntu-latest
 
     steps:
