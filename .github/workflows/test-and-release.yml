@@ -190,8 +190,8 @@ jobs:
           files: |
             LICENSE
             README.md
-            dist/*.iife.js
-            dist/*.iife.min.js
+            dist/async_channels.iife.js
+            dist/async_channels.iife.min.js
 
       - uses: marvinpinto/action-automatic-releases@latest
         if: ${{ ! needs.version.outputs.is_pre }}
@@ -202,5 +202,5 @@ jobs:
           files: |
             LICENSE
             README.md
-            dist/*.iife.js
-            dist/*.iife.min.js
+            dist/async_channels.iife.js
+            dist/async_channels.iife.min.js

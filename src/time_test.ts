@@ -57,15 +57,18 @@ Deno.test("Timer -> stop -> reset", async () => {
 });
 
 Deno.test("after", async () => {
-  const duration = 50;
-  const start = new Date();
-  const [end] = await after(duration).get();
-  assert(end !== undefined, "channel should be open");
-  assertNumberBetween(
-    end.getTime() - start.getTime(),
-    duration,
-    duration + 10,
-  );
+  const intervals = [];
+  const duration = 10;
+  for (const _ of Array(100)) {
+    const start = new Date();
+    const [end] = await after(duration).get();
+    assert(end !== undefined, "channel should be open");
+    intervals.push((end.getTime() - start.getTime()) - duration);
+  }
+  intervals.sort();
+  const p95 = intervals[Math.floor(intervals.length * 0.95)];
+  console.log(p95, intervals);
+  assertLessThan(p95, 10);
 });
 
 async function analyzeTicker(interval: number, times: number) {
