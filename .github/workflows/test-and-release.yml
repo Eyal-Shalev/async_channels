@@ -56,6 +56,7 @@ jobs:
 
   build-npm:
     needs: [version]
+    if: ${{ always() }}
     strategy:
       matrix:
         registry: [npmjs, github]
@@ -88,7 +89,7 @@ jobs:
       - name: Build
         run: make build-npm
         env:
-          VERSION: ${{ needs.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version || '0.0.0-test' }}
           SCOPE: ${{ matrix.scope }}
 
       - uses: actions/upload-artifact@v2
