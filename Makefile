@@ -12,18 +12,13 @@ check-deno:
 check-esbuild:
 	esbuild --version
 
-check-rollup:
-	rollup --version
-	npm list -g typescript || npm list typescript
-	npm list -g rollup-plugin-dts || npm list rollup-plugin-dts
-
 check-nvm:
 	. ${NVM_DIR}/nvm.sh && nvm --version
 
 check-genhtml:
 	genhtml -v
 
-all: clean build build-min build-types
+all: clean build
 
 fmt: check-deno
 	deno fmt src
@@ -61,44 +56,18 @@ benchmark-txt: benchmark-write
 benchmark-html: benchmark-write
 	cat benchmark.out | ansi2html > benchmark.html
 
-package-json: check-deno
-	deno run --lock scripts/package-json-lock.json --import-map scripts/import_map.json --allow-env="SCOPE,VERSION" --allow-write="./package.json" scripts/package-json.ts
+build: build-npm build-iife build-iife-min
 
-build-types: emit-types bundle-types
+build-npm: check-deno
+	deno run --import-map scripts/import_map.json --lock scripts/build-npm-lock.json -A scripts/build-npm.ts
 
-emit-types: check-deno
-	deno run --lock=scripts/emit-types-lock.json --import-map scripts/import_map.json --allow-write=dist --allow-read=src --unstable scripts/emit-types.ts
+build-iife: build-iife-full build-iife-min
 
-bundle-types: check-rollup
-	rollup dist/types/mod.d.ts --file "dist/async_channels.d.ts" --plugin dts
-
-build: build-esm build-cjs build-iife
-
-build-esm: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.esm.js --format="esm" src/mod.ts
-
-build-cjs: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.cjs.js --format=cjs src/mod.ts
-
-build-iife: check-esbuild
+build-iife-full: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.iife.js --format=iife --global-name=async_channels src/mod.ts
-
-build-min: build-esm-min build-cjs-min build-iife-min
-
-build-esm-min: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.esm.min.js --format="esm" src/mod.ts
-
-build-cjs-min: check-esbuild
-	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.cjs.min.js --format=cjs src/mod.ts
 
 build-iife-min: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --minify --outfile=dist/async_channels.iife.min.js --format=iife --global-name=async_channels src/mod.ts
-
-post-build-test: check-node check-npm
-	node -e 'import("./dist/async_channels.esm.js").catch(e=>console.error(e)).then(ac => console.log(ac))'
-	node -e 'console.log(require("./dist/async_channels.cjs.js"))'
-
-install: install-esbuild install-rollup
 
 install-nvm:
 	curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
@@ -106,14 +75,13 @@ install-nvm:
 install-node: check-nvm
 	. ${NVM_DIR}/nvm.sh && nvm install --lts
 
-install-rollup: check-npm
-	npm i -g rollup rollup-plugin-dts typescript
+install: install-esbuild
 
 install-esbuild: check-npm
 	npm i -g esbuild
 
 clean:
-	rm -rf dist coverage package.json benchmark.txt benchmark.html
+	rm -rf dist coverage benchmark.*
 
 clear:
 	clear

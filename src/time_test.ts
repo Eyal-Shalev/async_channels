@@ -57,22 +57,25 @@ Deno.test("Timer -> stop -> reset", async () => {
 });
 
 Deno.test("after", async () => {
-  const duration = 50;
-  const start = new Date();
-  const [end] = await after(duration).get();
-  assert(end !== undefined, "channel should be open");
-  assertNumberBetween(
-    end.getTime() - start.getTime(),
-    duration,
-    duration + 10,
-  );
+  const intervals = [];
+  const duration = 10;
+  for (const _ of Array(100)) {
+    const start = new Date();
+    const [end] = await after(duration).get();
+    assert(end !== undefined, "channel should be open");
+    intervals.push((end.getTime() - start.getTime()) - duration);
+  }
+  intervals.sort();
+  const p95 = intervals[Math.floor(intervals.length * 0.95)];
+  assertLessThan(p95, 10);
 });
 
 async function analyzeTicker(interval: number, times: number) {
-  const startMs = new Date().getTime();
+  const data = Array(times);
   const ticker = new Ticker(interval);
   const results: number[] = [];
-  for (const _ of Array(times)) {
+  const startMs = new Date().getTime();
+  for (const _ of data) {
     const [val, _] = await ticker.c.get();
     assert(val);
     results.push(val.getTime());
@@ -81,18 +84,17 @@ async function analyzeTicker(interval: number, times: number) {
   const resultsWithStart = [startMs, ...results];
   const intervals = results.map((next, index) =>
     (next - resultsWithStart[index]) - interval
-  );
+  ).sort();
 
+  const sum = intervals.reduce((acc, item) => acc + item);
   return {
-    avg: intervals.reduce((acc, item) => acc + item) / times,
-    min: Math.min(...intervals),
-    max: Math.max(...intervals),
+    p95: intervals[Math.floor(intervals.length * 0.95)],
+    avg: sum / times,
   };
 }
 
 Deno.test("Ticker", async () => {
-  const { avg, min, max } = await analyzeTicker(30, 50);
+  const { avg, p95 } = await analyzeTicker(10, 100);
   assertLessThan(avg, 2);
-  assertLessThan(min, 2);
-  assertLessThan(max, 3.01);
+  assertLessThan(p95, 2.01);
 });
