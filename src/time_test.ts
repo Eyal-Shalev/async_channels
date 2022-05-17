@@ -67,7 +67,6 @@ Deno.test("after", async () => {
   }
   intervals.sort();
   const p95 = intervals[Math.floor(intervals.length * 0.95)];
-  console.log(p95, intervals);
   assertLessThan(p95, 10);
 });
 
