@@ -61,7 +61,9 @@ build: build-npm build-iife build-iife-min
 build-npm: check-deno
 	deno run --import-map scripts/import_map.json --lock scripts/build-npm-lock.json -A scripts/build-npm.ts
 
-build-iife: check-esbuild
+build-iife: build-iife-full build-iife-min
+
+build-iife-full: check-esbuild
 	esbuild --banner:js="$$LICENSE_BANNER" --bundle --outfile=dist/async_channels.iife.js --format=iife --global-name=async_channels src/mod.ts
 
 build-iife-min: check-esbuild
