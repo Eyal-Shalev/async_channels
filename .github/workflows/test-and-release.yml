@@ -10,6 +10,8 @@ on:
 
 env:
   BUNDLE_NAME: async_channels
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   test:
@@ -87,7 +89,7 @@ jobs:
 
       - name: Build
         run: make build
-        with:
+        env:
           VERSION: ${{ needs.version.outputs.version }}
           SCOPE: ${{ matrix.scope }}
 
@@ -105,10 +107,10 @@ jobs:
         include:
           - registry: npm
             registry-url: https://registry.npmjs.org
-            token: ${{ secrets.NPM_TOKEN }}
+            token: $NPM_TOKEN
           - registry: github
             registry-url: 'https://npm.pkg.github.com'
-            token: ${{ secrets.GITHUB_TOKEN }}
+            token: $GITHUB_TOKEN
     runs-on: ubuntu-latest
     permissions:
       packages: write
