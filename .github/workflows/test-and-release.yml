@@ -127,13 +127,13 @@ jobs:
           registry-url: ${{ matrix.registry-url }}
 
       - run: publish - npmjs
-        if: ${{ matrix.registry == "npmjs" }}
+        if: ${{ matrix.registry == 'npmjs' }}
         working-directory: dist/npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - run: publish - github
-        if: ${{ matrix.registry == "github" }}
+        if: ${{ matrix.registry == 'github' }}
         working-directory: dist/npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
