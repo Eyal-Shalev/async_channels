@@ -1,30 +1,28 @@
 import { after, Ticker, Timer } from "./time.ts";
 import { assert, assertEquals, fail } from "deno/testing/asserts.ts";
-import { assertLessThan, assertNumberBetween } from "./internal/test_utils.ts";
+import { assertLessThan } from "./internal/test_utils.ts";
 
 Deno.test("Timer", async () => {
-  const start = new Date();
-  const t = new Timer(50);
-  let [val] = await t.c.get();
-  let end = new Date();
-  t.reset(50);
-  if (!val) fail("unreachable");
-  assertNumberBetween(end.getTime() - val.getTime(), 0, 11);
-  assertNumberBetween(
-    val.getTime() - start.getTime(),
-    50,
-    56,
-  );
-
-  [val] = await t.c.get();
-  end = new Date();
-  if (!val) fail("unreachable");
-  assertNumberBetween(end.getTime() - val.getTime(), 0, 11);
-  assertNumberBetween(
-    val.getTime() - start.getTime(),
-    100,
-    110,
-  );
+  const runIntervals = [];
+  const expectedVsActualIntervals = [];
+  const duration = 10;
+  for (const _ of Array(100)) {
+    const start = new Date();
+    const t = new Timer(duration);
+    const [actualEnd] = await t.c.get();
+    const expectedEnd = new Date();
+    assert(actualEnd !== undefined, "channel should be open");
+    runIntervals.push((actualEnd.getTime() - start.getTime()) - duration);
+    expectedVsActualIntervals.push(expectedEnd.getTime() - actualEnd.getTime());
+  }
+  runIntervals.sort();
+  expectedVsActualIntervals.sort();
+  const runP95 = runIntervals[Math.floor(runIntervals.length * 0.95)];
+  const expectedVsActualP95 = expectedVsActualIntervals[
+    Math.floor(expectedVsActualIntervals.length * 0.95)
+  ];
+  assertLessThan(runP95, 2.01);
+  assertLessThan(expectedVsActualP95, 3.01);
 });
 
 Deno.test("Timer -> stop -> reset", async () => {
@@ -67,7 +65,7 @@ Deno.test("after", async () => {
   }
   intervals.sort();
   const p95 = intervals[Math.floor(intervals.length * 0.95)];
-  assertLessThan(p95, 10);
+  assertLessThan(p95, 2.01);
 });
 
 async function analyzeTicker(interval: number, times: number) {
