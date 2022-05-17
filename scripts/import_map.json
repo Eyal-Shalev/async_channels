@@ -4,6 +4,8 @@
     "async_channels/": "../src/",
     "esbuild": "https://deno.land/x/esbuild@v0.13.2/mod.js",
     "deno/": "https://deno.land/std@0.139.0/",
-    "semver": "https://deno.land/x/semver@v1.4.0/mod.ts"
+    "semver": "https://deno.land/x/semver@v1.4.0/mod.ts",
+    "dnt": "https://deno.land/x/dnt@0.23.0/mod.ts",
+    "which_runtime": "https://deno.land/x/which_runtime@0.2.0/mod.ts"
   }
 }
