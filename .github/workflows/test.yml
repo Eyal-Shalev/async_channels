@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: ./github/build-npm
+      - uses: ./.github/build-npm
         with:
           scope: ${{ matrix.scope }}
           registry: ${{ matrix.registry }}
@@ -84,6 +84,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: ./github/build-iife
+      - uses: ./.github/build-iife
         with:
           version: ${{ needs.version.outputs.version }}
