@@ -41,23 +41,8 @@ jobs:
           fail_ci_if_error: true
           verbose: true
 
-  version:
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - name: Version
-        id: version
-        run: echo ::set-output name=version::${GITHUB_REF/refs\/tags\/v/}
-      - name: Is pre-release
-        id: is_pre
-        run: echo ::set-output name=IS_PRE::"$([[ ${{steps.version.outputs.version}} =~ .+-.+ ]] && echo 0 || echo 1)"
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      is_pre: ${{ steps.is_pre.outputs.IS_PRE }}
-
   build-npm:
     name: Test NPM build
-    needs: [version]
     if: ${{ always() }}
     strategy:
       matrix:
@@ -79,7 +64,6 @@ jobs:
         with:
           scope: ${{ matrix.scope }}
           registry-url: ${{ matrix.registry-url }}
-          version: ${{ needs.version.outputs.version }}
           dist: dist-${{ matrix.registry }}
 
   build-iife:
@@ -91,5 +75,3 @@ jobs:
         uses: actions/checkout@v2
 
       - uses: ./.github/build-iife
-        with:
-          version: ${{ needs.version.outputs.version }}
