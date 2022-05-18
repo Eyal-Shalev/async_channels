@@ -9,7 +9,7 @@ import {
 } from "deno/testing/asserts.ts";
 
 Deno.test("invalid bufferSize", () => {
-  assertThrows(() => new Channel(-1), RangeError);
+  assertThrows(() => new Channel(0.5), RangeError);
 });
 
 Deno.test("no-buffer get-> send", async () => {

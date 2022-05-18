@@ -12,8 +12,9 @@ export * from "./subscribe.ts";
  */
 export interface ChannelPipeOptions extends ChannelOptions {
   /**
-   * A safe and positive integer representing the channel buffer size.
-   * A `bufferSize` of `0` indicates a channel without any buffer.
+   *  A safe integer representing the channel buffer size.
+   *  A `bufferSize` of `0` indicates a channel without any buffer.
+   *  A negative `bufferSize` indicates a channel with an endless buffer.
    * @type {number}
    */
   bufferSize?: number;

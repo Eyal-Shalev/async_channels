@@ -12,7 +12,7 @@ import {
 } from "./internal/state_machine.ts";
 import {
   ignoreAbortedError,
-  isNonNegativeSafeInteger,
+  isSafeInteger,
   makeAbortCtrl,
   raceAbort,
 } from "./internal/utils.ts";
@@ -85,16 +85,17 @@ export class Channel<T>
   /**
    * Constructs a new Channel with an optional buffer.
    *
-   * @param {number} [bufferSize=0] A safe and positive integer representing the channel buffer size.
+   * @param {number} [bufferSize=0] A safe integer representing the channel buffer size.
    *   A `bufferSize` of `0` indicates a channel without any buffer.
+   *   A negative `bufferSize` indicates a channel with an endless buffer.
    * @param {ChannelOptions} [options]
    */
   constructor(
     readonly bufferSize: number = 0,
     protected readonly options?: ChannelOptions,
   ) {
-    if (!isNonNegativeSafeInteger(bufferSize)) {
-      throw new RangeError("bufferSize must be a safe non-negative integer.");
+    if (!isSafeInteger(bufferSize)) {
+      throw new RangeError("bufferSize must be a safe integer.");
     }
     this.#state = Idle(this.debug.bind(this));
     this.#queue = new Queue<T>(bufferSize);
