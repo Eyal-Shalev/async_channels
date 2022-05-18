@@ -1,9 +1,17 @@
 name: Test & Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version
+        required: true
+        type: string
+
   pull_request:
     types: [opened, reopened, synchronize]
   push:
+    branches: [main]
     tags:
       - v*
 
@@ -41,14 +49,19 @@ jobs:
 
   version:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.version
     steps:
       - name: Get version
         id: get_version
+        if: startsWith(github.ref, 'refs/tags/v')
         run: echo ::set-output name=version::${GITHUB_REF/refs\/tags\/v/}
+      - name: Get version
+        id: get_version
+        if: github.event.inputs.version
+        run: echo ::set-output name=version::${{github.event.inputs.version}}
       - name: Is pre-release
         id: is_pre
-        run: echo ::set-output name=IS_PRE::"$([[ $GITHUB_REF =~ refs\/tags\/v.+-.+ ]] && echo 0 || echo 1)"
+        run: echo ::set-output name=IS_PRE::"$([[ ${{steps.get_version.outputs.version}} =~ .+-.+ ]] && echo 0 || echo 1)"
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       is_pre: ${{ steps.is_pre.outputs.IS_PRE }}
