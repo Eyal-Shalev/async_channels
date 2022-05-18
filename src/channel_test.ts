@@ -4,13 +4,8 @@ import {
   assertEquals,
   assertIsError,
   assertRejects,
-  assertThrows,
   fail,
 } from "deno/testing/asserts.ts";
-
-Deno.test("invalid bufferSize", () => {
-  assertThrows(() => new Channel(-1), RangeError);
-});
 
 Deno.test("no-buffer get-> send", async () => {
   const chan = new Channel<string>(0);
