@@ -65,6 +65,7 @@ jobs:
           scope: ${{ matrix.scope }}
           registry-url: ${{ matrix.registry-url }}
           dist: dist-${{ matrix.registry }}
+          version: 0.0.0-${GITHUB_SHA}
 
   build-iife:
     name: Test IIFE build

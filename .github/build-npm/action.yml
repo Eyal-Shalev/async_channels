@@ -10,8 +10,7 @@ inputs:
     required: true
   version:
     description: Version
-    required: false
-    default: 0.0.0-${GITHUB_SHA}
+    required: true
   dist:
     description: The artifact name for the build output.
     required: false
