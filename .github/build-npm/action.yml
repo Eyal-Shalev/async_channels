@@ -10,7 +10,8 @@ inputs:
     required: false
   version:
     description: Version
-    required: true
+    required: false
+    default: 0.0.0-test
   dist:
     description: The artifact name for the build output.
     required: false
