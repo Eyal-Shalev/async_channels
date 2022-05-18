@@ -2,9 +2,6 @@ name: Build NPM
 description: Builds the project for NPM release.
 
 inputs:
-  registry:
-    description: Registry
-    required: true
   scope:
     description: Scope
     required: true
@@ -18,7 +15,7 @@ inputs:
   dist:
     description: The artifact name for the build output.
     required: false
-    default: dist-${{ inputs.registry }}
+    default: dist-npm
 
 runs:
   using: composite

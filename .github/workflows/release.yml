@@ -46,9 +46,9 @@ jobs:
       - uses: ./.github/build-npm
         with:
           scope: ${{ matrix.scope }}
-          registry: ${{ matrix.registry }}
           registry-url: ${{ matrix.registry-url }}
           version: ${{ needs.version.outputs.version }}
+          dist: dist-${{ matrix.registry }}
 
   publish:
     name: Publish
