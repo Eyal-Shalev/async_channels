@@ -7,7 +7,7 @@ inputs:
     required: true
   registry-url:
     description: Registry URL
-    required: true
+    required: false
   version:
     description: Version
     required: true

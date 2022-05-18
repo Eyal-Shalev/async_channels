@@ -43,17 +43,6 @@ jobs:
 
   build-npm:
     name: Test NPM build
-    if: ${{ always() }}
-    strategy:
-      matrix:
-        registry: [npmjs, github]
-        include:
-          - registry: npmjs
-            scope: "eyalsh"
-            registry-url: https://registry.npmjs.org
-          - registry: github
-            scope: "Eyal-Shalev"
-            registry-url: 'https://npm.pkg.github.com'
     runs-on: ubuntu-latest
 
     steps:
@@ -62,10 +51,8 @@ jobs:
 
       - uses: ./.github/build-npm
         with:
-          scope: ${{ matrix.scope }}
-          registry-url: ${{ matrix.registry-url }}
-          dist: dist-${{ matrix.registry }}
-          version: 0.0.0-${GITHUB_SHA}
+          scope: test
+          version: 0.0.0-${{GITHUB_SHA}}
 
   build-iife:
     name: Test IIFE build
