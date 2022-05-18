@@ -1,0 +1,89 @@
+name: Test
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    types: [opened, reopened, synchronize]
+  push:
+    branches: [main]
+    tags:
+      - v*
+
+env:
+  BUNDLE_NAME: async_channels
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Git Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Verify formatting
+        run: make fmt-check
+
+      - name: Run linter
+        run: make lint
+
+      - name: Run tests (with coverage)
+        run: make coverage
+
+      - uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./coverage
+          fail_ci_if_error: true
+          verbose: true
+
+  version:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Version
+        id: version
+        run: echo ::set-output name=version::${GITHUB_REF/refs\/tags\/v/}
+      - name: Is pre-release
+        id: is_pre
+        run: echo ::set-output name=IS_PRE::"$([[ ${{steps.version.outputs.version}} =~ .+-.+ ]] && echo 0 || echo 1)"
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_pre: ${{ steps.is_pre.outputs.IS_PRE }}
+
+  build-npm:
+    name: Test NPM build
+    needs: [version]
+    if: ${{ always() }}
+    strategy:
+      matrix:
+        registry: [npmjs, github]
+        include:
+          - registry: npmjs
+            scope: "eyalsh"
+            registry-url: https://registry.npmjs.org
+          - registry: github
+            scope: "Eyal-Shalev"
+            registry-url: 'https://npm.pkg.github.com'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: ./github/build-npm
+        with:
+          scope: ${{ matrix.scope }}
+          registry: ${{ matrix.registry }}
+          registry-url: ${{ matrix.registry-url }}
+          version: ${{ needs.version.outputs.version }}
+
+  build-iife:
+    name: Test IIFE build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: ./github/build-iife
+        with:
+          version: ${{ needs.version.outputs.version }}

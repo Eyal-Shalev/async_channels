@@ -1,0 +1,40 @@
+name: Build IIFE
+description: Builds the project for IIFE release.
+
+inputs:
+  version:
+    description: Version
+    required: false
+    default: 0.0.0-$GITHUB_SHA
+  dist:
+    description: The artifact name for the build output.
+    required: false
+    default: dist-iife
+
+runs:
+  using: composite
+  steps:
+    - name: Git Checkout
+      uses: actions/checkout@v2
+
+    - uses: actions/setup-node@v2
+      with:
+        node-version: 16
+
+    - name: Setup Deno
+      uses: denoland/setup-deno@v1
+      with:
+        deno-version: v1.x
+
+    - name: Install
+      shell: bash
+      run: make install
+
+    - name: Build
+      shell: bash
+      run: make build-iife
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ${{ inputs.dist }}
+        path: dist

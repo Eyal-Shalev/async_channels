@@ -1,15 +1,6 @@
-name: Test & Release
+name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Version
-        required: true
-        type: string
-
-  pull_request:
-    types: [opened, reopened, synchronize]
   push:
     tags:
       - v*
@@ -18,44 +9,14 @@ env:
   BUNDLE_NAME: async_channels
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Git Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
-
-      - name: Verify formatting
-        run: make fmt-check
-
-      - name: Run linter
-        run: make lint
-
-      - name: Run tests (with coverage)
-        run: make coverage
-
-      - uses: codecov/codecov-action@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./coverage
-          fail_ci_if_error: true
-          verbose: true
 
   version:
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.version
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - name: Get version
-        id: version_from_tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Version
+        id: version
         run: echo ::set-output name=version::${GITHUB_REF/refs\/tags\/v/}
-      - id: version
-        run: echo ::set-output name=version::${{ steps.version_from_tag.outputs.version || github.event.inputs.version }}
       - name: Is pre-release
         id: is_pre
         run: echo ::set-output name=IS_PRE::"$([[ ${{steps.version.outputs.version}} =~ .+-.+ ]] && echo 0 || echo 1)"
@@ -79,36 +40,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Git Checkout
-        uses: actions/checkout@v2
-
-      - uses: actions/setup-node@v2
+      - uses: ./github/build-npm
         with:
-          node-version: 16
+          scope: ${{ matrix.scope }}
+          registry: ${{ matrix.registry }}
           registry-url: ${{ matrix.registry-url }}
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
-
-      - name: Install
-        run: make install
-
-      - name: Build
-        run: make build-npm
-        env:
-          VERSION: ${{ needs.version.outputs.version || '0.0.0-test' }}
-          SCOPE: ${{ matrix.scope }}
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: dist-${{ matrix.registry }}
-          path: dist
+          version: ${{ needs.version.outputs.version }}
 
   publish:
     name: Publish
-    needs: [test, build-npm, version]
+    needs: [build-npm, version]
     strategy:
       matrix:
         registry: [npmjs, github]
@@ -154,28 +95,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Git Checkout
-        uses: actions/checkout@v2
-
-      - uses: actions/setup-node@v2
+      - uses: ./github/build-iife
         with:
-          node-version: 16
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
-
-      - name: Install
-        run: make install
-
-      - name: Build
-        run: make build-iife
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: dist-iife
-          path: dist
+          version: ${{ needs.version.outputs.version }}
 
   release:
     name: Release
@@ -197,7 +119,6 @@ jobs:
           prerelease: true
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           title: Version ${{ needs.version.outputs.version }}
-          automatic_release_tag: ${{ needs.version.outputs.version }}
           files: |
             LICENSE
             README.md
@@ -209,7 +130,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           title: Version ${{ needs.version.outputs.version }}
-          automatic_release_tag: ${{ needs.version.outputs.version }}
           files: |
             LICENSE
             README.md
