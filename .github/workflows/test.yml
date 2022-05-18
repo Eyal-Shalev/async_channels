@@ -72,6 +72,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Git Checkout
+        uses: actions/checkout@v2
+
       - uses: ./.github/build-npm
         with:
           scope: ${{ matrix.scope }}
@@ -84,6 +87,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Git Checkout
+        uses: actions/checkout@v2
+
       - uses: ./.github/build-iife
         with:
           version: ${{ needs.version.outputs.version }}
